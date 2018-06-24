@@ -1,0 +1,6 @@
+AMOUNT('Bob',a)
+IMPLIES NOT (
+(ONCE[0,*] CTX('Mary')) AND
+(NOT EXISTS cx1. (CTX(cx1) AND NOT cx1='Bob') SINCE[0,*] CTX('Mary')) AND
+(ONCE[0,30000] COUNT('Bob', c) AND c > 2)
+)
