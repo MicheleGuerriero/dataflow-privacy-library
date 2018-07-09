@@ -1,9 +1,13 @@
-package library;
+package it.deib.polimi.diaprivacy.library;
 
+import java.io.FileNotFoundException;
+import java.io.PrintWriter;
+import java.io.UnsupportedEncodingException;
 import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -13,12 +17,15 @@ import java.util.concurrent.TimeUnit;
 
 import org.apache.flink.streaming.api.functions.co.RichCoFlatMapFunction;
 import org.apache.flink.util.Collector;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import it.deib.polimi.diaprivacy.model.ContextualCondition;
 import it.deib.polimi.diaprivacy.model.PastCondition;
 import scala.collection.mutable.HashSet;
 
 import org.apache.flink.api.java.tuple.Tuple3;
+import org.apache.flink.configuration.Configuration;
 import org.apache.flink.api.java.tuple.Tuple2;
 
 public class SubjectSpecificConditionChecker<T, S> extends
@@ -36,6 +43,8 @@ public class SubjectSpecificConditionChecker<T, S> extends
 
 	private List<Tuple2<String, S>> retainedOtherStreamWindow;
 
+	private List<Tuple2<String, S>> retainedOtherStreamLastValue;
+
 	private ConcurrentHashMap<T, Tuple3<String, List<Tuple2<String, S>>, S>> tupleMetadata;
 
 	private Map<T, Boolean> resultPerTuple;
@@ -48,7 +57,7 @@ public class SubjectSpecificConditionChecker<T, S> extends
 
 	private int associatedStream;
 
-	private HashSet<T> waitingForSecondTime;
+	private PrintWriter writer;
 
 	private HashSet<String> dsWithAtLeastOneCondition;
 
@@ -74,9 +83,9 @@ public class SubjectSpecificConditionChecker<T, S> extends
 		this.lastValuePerSubject = new HashMap<String, S>();
 		this.conditionPerDataSubject = new HashMap<String, ContextualCondition>();
 		this.retainedOtherStreamWindow = new ArrayList<Tuple2<String, S>>();
+		this.retainedOtherStreamLastValue = new ArrayList<Tuple2<String, S>>();
 		this.resultPerTuple = new HashMap<T, Boolean>();
 		this.otherResults = new HashMap<T, List<Boolean>>();
-		this.waitingForSecondTime = new HashSet<T>();
 	}
 
 	@Override
@@ -85,14 +94,14 @@ public class SubjectSpecificConditionChecker<T, S> extends
 
 		Field e = value.f1.getClass().getDeclaredField("eventTime");
 		e.setAccessible(true);
-		System.out.println("Received tuple from the main stream: " + value.f1);
+		writer.println("Received tuple from the main stream: " + value.f1);
 
 		if (pastConditionPerDataSubject.containsKey(value.f0)) {
-			System.out.println("There exists a past condition for the data subject " + value.f0);
+			writer.println("There exists a past condition for the data subject " + value.f0);
 			PastCondition cond = this.pastConditionPerDataSubject.get(value.f0);
 			if (this.processingInEventTime && this.alowedLateness > 0) {
 				if (!this.tupleMetadata.containsKey(value.f1)) {
-					System.out.println("First time that this tuple is received. Init phase.");
+					writer.println("First time that this tuple is received. Init phase.");
 					// if not contained and list is empty we are in the initialization phase (firsst
 					// time that I see this tuple)
 
@@ -124,38 +133,80 @@ public class SubjectSpecificConditionChecker<T, S> extends
 					}
 					//
 
-					System.out.println("Initial window from stream " + this.getAssociatedStream());
+					writer.println("Initial window from stream " + this.getAssociatedStream());
 
 					for (Tuple2<String, S> i : initWindow) {
-						System.out.println(i.f1);
+						writer.println(i.f1.toString());
 					}
 
 					if (this.conditionPerDataSubject.containsKey(value.f0)) {
-						System.out.println("Data subject " + value.f0 + " has a static condition on the stream "
+						writer.println("Data subject " + value.f0 + " has a static condition on the stream "
 								+ this.associatedStream
 								+ ". Setting the value to be used currently for evaluating it.");
 						if (this.lastValuePerSubject.get(value.f0) != null) {
-							System.out.println("There exists already a value from stream " + this.associatedStream
+							writer.println("There exists already a value from stream " + this.associatedStream
 									+ " about " + value.f0);
 							////////////////////////////// !!!!!!!!!!!!!!!!!!
 							if ((Long) e.get(value.f1) > (Long) e.get(this.lastValuePerSubject.get(value.f0))) {
-								System.out.println(
+								writer.println(
 										"The existing value is older than the tuple from the  main stream just received. Setting this as value to be considered for static the condition.");
 								this.tupleMetadata.put(value.f1,
 										new Tuple3<>(value.f0, initWindow, this.lastValuePerSubject.get(value.f0)));
 							} else {
-								System.out.println(
+								writer.println(
 										"The existing value is newer than the tuple from the main stream just received. Setting no value for evaluating the static condition. ###########");
-								this.tupleMetadata.put(value.f1, new Tuple3<>(value.f0, initWindow, null));
+								///////////////////////////////// HERE THE VALUE SHOULD BE PICKED FROM THE
+								///////////////////////////////// RETAINED LIST
+								///////////////////////////////// WHICH SHOULD ALSO BE UPDATED
+								if (this.retainedOtherStreamLastValue.isEmpty()) {
+									this.tupleMetadata.put(value.f1, new Tuple3<>(value.f0, initWindow, null));
+								} else {
+									S last = null;
+									Field ts = this.retainedOtherStreamLastValue.get(0).f1.getClass()
+											.getDeclaredField("eventTime");
+									ts.setAccessible(true);
+									for (Tuple2<String, S> t : this.retainedOtherStreamLastValue) {
+										if (t.f0.equals(value.f0)) {
+											if (last == null) {
+												if ((Long) ts.get(t.f1) <= (Long) e.get(value.f1)) {
+													last = t.f1;
+												}
+											} else {
+												if ((Long) ts.get(t.f1) <= (Long) e.get(value.f1)
+														&& (Long) ts.get(t.f1) > (Long) ts.get(last)) {
+													last = t.f1;
+												}
+											}
+										}
+									}
+
+									if (last != null) {
+										this.tupleMetadata.put(value.f1, new Tuple3<>(value.f0, initWindow, last));
+										Iterator<Tuple2<String, S>> iter = this.retainedOtherStreamLastValue.iterator();
+										while (iter.hasNext()) {
+											Tuple2<String, S> t = iter.next();
+											if (t.f0.equals(value.f0)) {
+												if ((Long) ts.get(t) < (Long) ts.get(last)) {
+													iter.remove();
+												}
+											}
+										}
+									} else {
+										this.tupleMetadata.put(value.f1, new Tuple3<>(value.f0, initWindow, null));
+									}
+									/////////////////////////////////
+									/////////////////////////////////
+								}
 							}
 						} else {
-							System.out.println("No esisting tuple from the stream " + this.associatedStream
+							writer.println("No esisting tuple from the stream " + this.associatedStream
 									+ " about data subject " + value.f0
 									+ ". Setting no value for evaluating the static condition.");
 							this.tupleMetadata.put(value.f1, new Tuple3<>(value.f0, initWindow, null));
+
 						}
 					} else {
-						System.out.println("Data subject " + value.f0 + " has no static condition on the stream "
+						writer.println("Data subject " + value.f0 + " has no static condition on the stream "
 								+ this.associatedStream + ". Setting no value for evaluating static condition.");
 						this.tupleMetadata.put(value.f1, new Tuple3<>(value.f0, initWindow, null));
 					}
@@ -170,26 +221,26 @@ public class SubjectSpecificConditionChecker<T, S> extends
 					}
 				} else if (this.tupleMetadata.containsKey(value.f1)) {
 					// if contained and list is not empty we are second (the computation) phase
-					System.out.println(
+					writer.println(
 							"The just received tuple from the main stream was previously scheduled for processing.");
 					// if result have been not computed yet
 					if (this.resultPerTuple.get(value.f1) == null) {
-						System.out.println(
+						writer.println(
 								"The tuple still have to be processed processed. Saving the other results and waiting for the timer to expire.");
 						this.otherResults.put(value.f1, value.f2);
 					} else {
-						System.out.println("The tuple has been already processed and the result is available: "
+						writer.println("The tuple has been already processed and the result is available: "
 								+ this.resultPerTuple.get(value.f1));
 						List<Boolean> updated = value.f2;
 						updated.add(this.resultPerTuple.get(value.f1));
 
 						if (this.conditionPerDataSubject.containsKey(value.f0)) {
-							System.out.println("There exist also a static condition for data subject " + value.f0
+							writer.println("There exist also a static condition for data subject " + value.f0
 									+ " on the stream " + this.associatedStream
 									+ ". Computing the truth value and adding to the other values before emitting the tuple from the main stream.");
 							boolean result = this.checkCondition(value.f1, this.conditionPerDataSubject.get(value.f0));
 							updated.add(result);
-							System.out.println("Result is: " + result);
+							writer.println("Result is: " + result);
 
 						}
 
@@ -206,7 +257,7 @@ public class SubjectSpecificConditionChecker<T, S> extends
 				this.initializeWindow(value.f0, value.f1, cond);
 				this.checkTupleCondition(value, out);
 				this.tupleMetadata.remove(value.f1);
-				
+
 				if (this.conditionPerDataSubject.containsKey(value.f0)) {
 					boolean result = this.checkCondition(value.f1, this.conditionPerDataSubject.get(value.f0));
 					value.f2.add(result);
@@ -216,145 +267,98 @@ public class SubjectSpecificConditionChecker<T, S> extends
 			}
 		} else if (!pastConditionPerDataSubject.containsKey(value.f0)
 				&& this.dsWithAtLeastOneCondition.contains(value.f0)) {
-			System.out.println("The data subject " + value.f0 + " does not have a past condition over the stream "
+			writer.println("The data subject " + value.f0 + " does not have a past condition over the stream "
 					+ this.associatedStream + " but there exists a condition fom him along the chain.");
 			if (this.processingInEventTime && this.alowedLateness > 0) {
 				if (!isLast && !isFirst) {
-					System.out.println("This PCC is in the middle of the chain.");
-					if (this.tupleMetadata.contains(value.f1)) {
-						System.out.println("It is the second time that this tuple is received.");
+					writer.println("This PCC is in the middle of the chain.");
+					if (this.tupleMetadata.containsKey(value.f1)) {
+						writer.println("It is the second time that this tuple is received.");
 						if (this.conditionPerDataSubject.containsKey(value.f0)) {
-							System.out.println("There exists a static condition from the data subject " + value.f0
+							writer.println("There exists a static condition from the data subject " + value.f0
 									+ " over the stream " + this.associatedStream
 									+ ". Computing and adding the value before emitting.");
 							boolean result = this.checkCondition(value.f1, this.conditionPerDataSubject.get(value.f0));
 							value.f2.add(result);
-							System.out.println("Result is: " + result);
+							writer.println("Result is: " + result);
 						}
 						out.collect(value);
 					} else {
-						System.out.println(
+						writer.println(
 								"It is the first time that this tuple is received. Waiting for the second time.");
 
 						if (this.conditionPerDataSubject.containsKey(value.f0)) {
-							System.out.println("There exists a static condition from the data subject " + value.f0
+							writer.println("There exists a static condition from the data subject " + value.f0
 									+ " over the stream " + this.associatedStream);
 							///////////////////////////////// !!!!!!!!!!!!!!!!!!!!!!!!!!!!
-							if (this.lastValuePerSubject.get(value.f0) != null) {
-								Field t = this.lastValuePerSubject.get(value.f0).getClass().getDeclaredField("eventTime");
-								t.setAccessible(true);
-								if ((Long) t.get(this.lastValuePerSubject.get(value.f0)) < (Long) e.get(value.f1)) {
-									System.out.println("There is a value about " + value.f0 + " from the stream "
-											+ this.associatedStream
-											+ ". Setting this as the last value associated to the waiting tuple.");
-									this.tupleMetadata.put(value.f1, new Tuple3<>(value.f0, null, this.lastValuePerSubject.get(value.f0)));
-								} else {
-									System.out.println("There is a value about " + value.f0 + " from the stream "
-											+ this.associatedStream + ", but it is too new."
-											+ ". Setting no value associated to the waiting tuple.");
-									this.tupleMetadata.put(value.f1, new Tuple3<>(value.f0, null, null));
-								}
-							} else {
-								System.out.println("There is still no value about " + value.f0 + " from the stream "
-										+ this.associatedStream
-										+ ". Setting no last value associated to the waiting tuple.");
-								this.tupleMetadata.put(value.f1, new Tuple3<>(value.f0, null, null));
-							}
+							this.setLastValue(value);
 						} else {
-							System.out.println("There exists no static condition from the data subject " + value.f0
+							writer.println("There exists no static condition from the data subject " + value.f0
 									+ " over the stream " + this.associatedStream
 									+ ". Setting no last value associated to the waiting tuple.");
 							this.tupleMetadata.put(value.f1, new Tuple3<>(value.f0, null, null));
 						}
-						
+
 						out.collect(value);
 					}
 				} else if (isLast && !isFirst) {
-					System.out.println("This PCC is the last of the chain.");
-					if (!value.f2.isEmpty()) {
-						System.out.println("It is the second time that this tuple is received.");
+					writer.println("This PCC is the last of the chain.");
+					if (this.tupleMetadata.containsKey(value.f1)) {
+						writer.println("It is the second time that this tuple is received.");
 						if (this.conditionPerDataSubject.containsKey(value.f0)) {
-							System.out.println("There exists a static condition from the data subject " + value.f0
+							writer.println("There exists a static condition from the data subject " + value.f0
 									+ " over the stream " + this.associatedStream
 									+ ". Computing and adding the value before emitting.");
 
 							boolean result = this.checkCondition(value.f1, this.conditionPerDataSubject.get(value.f0));
 							value.f2.add(result);
-							System.out.println("Result is: " + result);
+							writer.println("Result is: " + result);
 						}
 						out.collect(value);
 					} else {
-						System.out.println(
+						writer.println(
 								"It is the first time that this tuple is received. Waiting for the second time.");
 						if (this.conditionPerDataSubject.containsKey(value.f0)) {
-							System.out.println("There exists a static condition from the data subject " + value.f0
+							writer.println("There exists a static condition from the data subject " + value.f0
 									+ " over the stream " + this.associatedStream);
 							///////////////////////////////// !!!!!!!!!!!!!!!!!!!!!!!!!!!!
-							if (this.lastValuePerSubject.get(value.f0) != null) {
-								System.out.println("There is a value about " + value.f0 + " from the stream "
-										+ this.associatedStream
-										+ ". Setting this as the last value associated to the waiting tuple.");
-								this.tupleMetadata.put(value.f1,
-										new Tuple3<>(value.f0, null, this.lastValuePerSubject.get(value.f0)));
-								System.out.println("Updated value: " + this.tupleMetadata.get(value.f1).f2);
-							} else {
-								System.out.println("There is still no value about " + value.f0 + " from the stream "
-										+ this.associatedStream
-										+ ". Setting no last value associated to the waiting tuple.");
-								this.tupleMetadata.put(value.f1, new Tuple3<>(value.f0, null, null));
-							}
+							this.setLastValue(value);
 						} else {
-							System.out.println("There exists no static condition from the data subject " + value.f0
+							writer.println("There exists no static condition from the data subject " + value.f0
 									+ " over the stream " + this.associatedStream
 									+ ". Setting no last value associated to the waiting tuple.");
 							this.tupleMetadata.put(value.f1, new Tuple3<>(value.f0, null, null));
 						}
 					}
 				} else if (isLast && isFirst) {
-					System.out.println("This PCC is the first of the chain.");
-					if (this.processingInEventTime && this.alowedLateness > 0) {
-						System.out.println("Scheduling processing of the received tuple and forwarding.");
-						this.eventTimeFlatMap1(value, out);
-						if (this.conditionPerDataSubject.containsKey(value.f0)) {
-							System.out.println("There exists a static condition from the data subject " + value.f0
-									+ " over the stream " + this.associatedStream);
-							///////////////////////////////// !!!!!!!!!!!!!!!!!!!!!!!!!!!!
-							if (this.lastValuePerSubject.get(value.f0) != null) {
-								System.out.println("There is a value about " + value.f0 + " from the stream "
-										+ this.associatedStream
-										+ ". Setting this as the last value associated to the waiting tuple.");
-								this.tupleMetadata.put(value.f1,
-										new Tuple3<>(value.f0, null, this.lastValuePerSubject.get(value.f0)));
-								System.out.println("Updated value: " + this.tupleMetadata.get(value.f1).f2);
-							} else {
-								System.out.println("There is still no value about " + value.f0 + " from the stream "
-										+ this.associatedStream
-										+ ". Setting no last value associated to the waiting tuple.");
-								this.tupleMetadata.put(value.f1, new Tuple3<>(value.f0, null, null));
-							}
-						} else {
-							System.out.println("There exists no static condition from the data subject " + value.f0
-									+ " over the stream " + this.associatedStream
-									+ ". Setting no last value associated to the waiting tuple.");
-							this.tupleMetadata.put(value.f1, new Tuple3<>(value.f0, null, null));
-						}					} else {
-						if (this.conditionPerDataSubject.containsKey(value.f0)) {
-							value.f2.add(this.checkCondition(value.f1, this.conditionPerDataSubject.get(value.f0)));
-						}
-						out.collect(value);
-					}					
-				} else if (!isLast && isFirst) {
-					System.out.println("This PCC is the first of the chain.");
-					if (this.processingInEventTime && this.alowedLateness > 0) {
-						System.out.println("Scheduling processing of the received tuple and forwarding.");
-						this.eventTimeFlatMap1(value, out);
-						out.collect(value);
+					writer.println("This PCC is the only one of the chain.");
+					writer.println("Scheduling processing of the received tuple and forwarding.");
+					if (this.conditionPerDataSubject.containsKey(value.f0)) {
+						writer.println("There exists a static condition from the data subject " + value.f0
+								+ " over the stream " + this.associatedStream);
+						///////////////////////////////// !!!!!!!!!!!!!!!!!!!!!!!!!!!!
+						this.setLastValue(value);
 					} else {
-						if (this.conditionPerDataSubject.containsKey(value.f0)) {
-							value.f2.add(this.checkCondition(value.f1, this.conditionPerDataSubject.get(value.f0)));
-						}
-						out.collect(value);
+						writer.println("There exists no static condition from the data subject " + value.f0
+								+ " over the stream " + this.associatedStream
+								+ ". Setting no last value associated to the waiting tuple.");
+						this.tupleMetadata.put(value.f1, new Tuple3<>(value.f0, null, null));
 					}
+					this.eventTimeFlatMap1(value, out);
+				} else if (!isLast && isFirst) {
+					if (this.conditionPerDataSubject.containsKey(value.f0)) {
+						writer.println("There exists a static condition from the data subject " + value.f0
+								+ " over the stream " + this.associatedStream);
+						///////////////////////////////// !!!!!!!!!!!!!!!!!!!!!!!!!!!!
+						this.setLastValue(value);
+					} else {
+						writer.println("There exists no static condition from the data subject " + value.f0
+								+ " over the stream " + this.associatedStream
+								+ ". Setting no last value associated to the waiting tuple.");
+						this.tupleMetadata.put(value.f1, new Tuple3<>(value.f0, null, null));
+					}
+					this.eventTimeFlatMap1(value, out);
+					out.collect(value);
 				}
 			} else {
 				if (this.conditionPerDataSubject.containsKey(value.f0)) {
@@ -370,17 +374,81 @@ public class SubjectSpecificConditionChecker<T, S> extends
 		}
 	}
 
+	private void setLastValue(Tuple3<String, T, List<Boolean>> value)
+			throws NoSuchFieldException, SecurityException, IllegalArgumentException, IllegalAccessException {
+
+		if (this.lastValuePerSubject.get(value.f0) != null) {
+			Field ts = this.lastValuePerSubject.get(value.f0).getClass().getDeclaredField("eventTime");
+			ts.setAccessible(true);
+
+			Field e = value.f1.getClass().getDeclaredField("eventTime");
+			e.setAccessible(true);
+
+			if ((Long) ts.get(this.lastValuePerSubject.get(value.f0)) < (Long) e.get(value.f1)) {
+				writer.println("There is a value about " + value.f0 + " from the stream " + this.associatedStream
+						+ ". Setting this as the last value associated to the waiting tuple.");
+				this.tupleMetadata.put(value.f1, new Tuple3<>(value.f0, null, this.lastValuePerSubject.get(value.f0)));
+			} else {
+				writer.println("There is a value about " + value.f0 + " from the stream " + this.associatedStream
+						+ ", but it is too new." + " Setting no value associated to the waiting tuple.");
+				///////////////////////////////// HERE THE VALUE SHOULD BE PICKED FROM THE
+				///////////////////////////////// RETAINED LIST
+				///////////////////////////////// WHICH SHOULD ALSO BE UPDATED
+				if (this.retainedOtherStreamLastValue.isEmpty()) {
+					this.tupleMetadata.put(value.f1, new Tuple3<>(value.f0, null, null));
+				} else {
+					S last = null;
+					for (Tuple2<String, S> t : this.retainedOtherStreamLastValue) {
+						if (t.f0.equals(value.f0)) {
+							if (last == null) {
+								if ((Long) ts.get(t.f1) <= (Long) e.get(value.f1)) {
+									last = t.f1;
+								}
+							} else {
+								if ((Long) ts.get(t.f1) <= (Long) e.get(value.f1)
+										&& (Long) ts.get(t.f1) > (Long) ts.get(last)) {
+									last = t.f1;
+								}
+							}
+						}
+					}
+
+					if (last != null) {
+						this.tupleMetadata.put(value.f1, new Tuple3<>(value.f0, null, last));
+						Iterator<Tuple2<String, S>> iter = this.retainedOtherStreamLastValue.iterator();
+						while (iter.hasNext()) {
+							Tuple2<String, S> t = iter.next();
+							if (t.f0.equals(value.f0)) {
+								if ((Long) ts.get(t.f1) < (Long) ts.get(last)) {
+									iter.remove();
+								}
+							}
+						}
+					} else {
+						this.tupleMetadata.put(value.f1, new Tuple3<>(value.f0, null, null));
+					}
+					/////////////////////////////////
+					/////////////////////////////////
+				}
+			}
+		} else {
+			writer.println("There is still no value about " + value.f0 + " from the stream " + this.associatedStream
+					+ ". Setting no last value associated to the waiting tuple.");
+			this.tupleMetadata.put(value.f1, new Tuple3<>(value.f0, null, null));
+		}
+	}
+
 	private boolean checkCondition(T t, ContextualCondition cond)
 			throws IllegalArgumentException, IllegalAccessException, NoSuchFieldException, SecurityException {
 
 		S lastTuple;
 
 		if (this.tupleMetadata.get(t) != null) {
-			System.out.println("The tuple is currently waiting (event time case)");
+			writer.println("The tuple is currently waiting (event time case)");
 			lastTuple = this.tupleMetadata.get(t).f2;
 
 		} else {
-			System.out.println("The tuple is no waiting (processing time case)");
+			writer.println("The tuple is no waiting (processing time case)");
 
 			Field ds = t.getClass().getDeclaredField("dataSubject");
 			ds.setAccessible(true);
@@ -388,11 +456,10 @@ public class SubjectSpecificConditionChecker<T, S> extends
 			lastTuple = this.lastValuePerSubject.get(ds.get(t));
 		}
 
-		Field a = lastTuple.getClass().getDeclaredField(cond.getVariable());
-		a.setAccessible(true);
-
 		if (lastTuple != null) {
-			System.out.println("Found tuple from the stream " + this.associatedStream
+			Field a = lastTuple.getClass().getDeclaredField(cond.getVariable());
+			a.setAccessible(true);
+			writer.println("Found tuple from the stream " + this.associatedStream
 					+ " associated to the tuple being processed from the main stream. Using that to check stati condition.");
 			switch (cond.getOperator()) {
 			case EQUAL: {
@@ -418,12 +485,11 @@ public class SubjectSpecificConditionChecker<T, S> extends
 			}
 		} else {
 			if (this.processingInEventTime) {
-				System.out.println("Processing in event time and found no tuple from stream " + this.associatedStream
+				writer.println("Processing in event time and found no tuple from stream " + this.associatedStream
 						+ " associated to the main stream tuple being processed. It should be that when the mainstream tuple arrived there"
 						+ "was no available tuple from the other stream e no tuple arrived in the waiting time.");
 			} else {
-				System.out.println("Processing in processing time and found no tuple from stream "
-						+ this.associatedStream
+				writer.println("Processing in processing time and found no tuple from stream " + this.associatedStream
 						+ " associated to the main stream tuple being processed. It should be that no tuple from the associated stream has been received yet.");
 			}
 			return false;
@@ -471,11 +537,11 @@ public class SubjectSpecificConditionChecker<T, S> extends
 	private void checkTupleCondition(Tuple3<String, T, List<Boolean>> value,
 			Collector<Tuple3<String, T, List<Boolean>>> out) throws Exception {
 
-		System.out.println("Checking conditions for tuple " + value.f1);
+		writer.println("Checking conditions for tuple " + value.f1);
 
 		if (pastConditionPerDataSubject.containsKey(value.f0)) {
 
-			System.out.println("There exists a past condition specified by data subject " + value.f0 + " on stream "
+			writer.println("There exists a past condition specified by data subject " + value.f0 + " on stream "
 					+ this.associatedStream);
 
 			PastCondition userPastEventPolicy = this.pastConditionPerDataSubject.get(value.f0);
@@ -509,16 +575,14 @@ public class SubjectSpecificConditionChecker<T, S> extends
 				break;
 			}
 			}
-			
-			System.out.println("The result of the past condition checking is: " + this.resultPerTuple.get(value.f1));
+
+			writer.println("The result of the past condition checking is: " + this.resultPerTuple.get(value.f1));
 		}
 
-
 		if (this.isFirst) {
-			System.out.println(
-					"This is the first PCC on the chian, so it is going to trigger the releasing of the tuple.");
+			writer.println("This is the first PCC on the chian, so it is going to trigger the releasing of the tuple.");
 			if (this.pastConditionPerDataSubject.containsKey(value.f0)) {
-				System.out.println(
+				writer.println(
 						"Adding to the tuple the result for the past condition specified by data subject " + value.f0);
 				value.f2.add(this.resultPerTuple.get(value.f1));
 				this.resultPerTuple.remove(value.f1);
@@ -528,7 +592,7 @@ public class SubjectSpecificConditionChecker<T, S> extends
 			}
 
 			if (this.conditionPerDataSubject.containsKey(value.f0)) {
-				System.out.println("Adding to the tuple the result for the static condition specified by data subject "
+				writer.println("Adding to the tuple the result for the static condition specified by data subject "
 						+ value.f0);
 				value.f2.add(this.checkCondition(value.f1, this.conditionPerDataSubject.get(value.f0)));
 			}
@@ -536,9 +600,9 @@ public class SubjectSpecificConditionChecker<T, S> extends
 		}
 
 		if (this.otherResults.containsKey(value.f1)) {
-			System.out.println(
+			writer.println(
 					"This is a PCC for which the timer of the current tuple was already expired and was waiting for the tuple being received for the second time.");
-			System.out.println("Adding to the tuple all the results that were stored for it.");
+			writer.println("Adding to the tuple all the results that were stored for it.");
 			value.f2.add(this.resultPerTuple.get(value.f1));
 			for (Boolean result : this.otherResults.get(value.f1)) {
 				value.f2.add(result);
@@ -547,7 +611,7 @@ public class SubjectSpecificConditionChecker<T, S> extends
 			this.resultPerTuple.remove(value.f1);
 
 			if (this.conditionPerDataSubject.containsKey(value.f0)) {
-				System.out.println("Adding to the tuple the result for the static condition specified by data subject "
+				writer.println("Adding to the tuple the result for the static condition specified by data subject "
 						+ value.f0);
 				value.f2.add(this.checkCondition(value.f1, this.conditionPerDataSubject.get(value.f0)));
 			}
@@ -574,20 +638,20 @@ public class SubjectSpecificConditionChecker<T, S> extends
 	@Override
 	public void flatMap2(Tuple2<String, S> value, Collector<Tuple3<String, T, List<Boolean>>> out) throws Exception {
 
-		System.out.println("Received new tuple on stream " + this.associatedStream + ": " + value.f1);
+		writer.println("Received new tuple on stream " + this.associatedStream + ": " + value.f1);
 
 		Field t = value.f1.getClass().getDeclaredField("eventTime");
 		t.setAccessible(true);
 
 		if (pastConditionPerDataSubject.containsKey(value.f0)) {
 
-			System.out.println("There exists a past condition for the associated data subject " + value.f0);
+			writer.println("There exists a past condition for the associated data subject " + value.f0);
 
 			this.retainedOtherStreamWindow.add(value);
 
 			PastCondition userPastEventPolicy = pastConditionPerDataSubject.get(value.f0);
 
-			System.out.println("Updating the windows associated to each waiting tuple which referes to " + value.f0);
+			writer.println("Updating the windows associated to each waiting tuple which referes to " + value.f0);
 
 			for (T tuple : tupleMetadata.keySet()) {
 				List<Tuple2<String, S>> updatedList = tupleMetadata.get(tuple).f1;
@@ -596,14 +660,14 @@ public class SubjectSpecificConditionChecker<T, S> extends
 				ds.setAccessible(true);
 
 				if (value.f0.equals(ds.get(tuple))) {
-					System.out.println("Found a waiting tuple of the main stream about " + value.f0 + ": " + tuple);
+					writer.println("Found a waiting tuple of the main stream about " + value.f0 + ": " + tuple);
 					if ((Long) t.get(value.f1) >= (Long) t.get(tuple) - userPastEventPolicy.timeWindowMilliseconds()
 							&& (Long) t.get(value.f1) <= (Long) t.get(tuple)) {
-						System.out.println(
+						writer.println(
 								"The just received tuple has a timestamp which is older than the waiting tuple but within the window specified by the past condition. Updating the window associated to the waiting tuple.");
 						updatedList.add(value);
 					} else {
-						System.out.println(
+						writer.println(
 								"The just received tuple has a timestamp which is either newer than the waiting tuple or that do not belong to the window specified by the past condition. No update.");
 					}
 				}
@@ -611,56 +675,58 @@ public class SubjectSpecificConditionChecker<T, S> extends
 		}
 
 		if (conditionPerDataSubject.containsKey(value.f0)) {
-			System.out.println("There exists a static condition for the associated data subject " + value.f0);
 
-			System.out.println("Updating the last value associated to each waiting tuple which referes to " + value.f0);
+			this.retainedOtherStreamLastValue.add(value);
+			writer.println("There exists a static condition for the associated data subject " + value.f0);
+
+			writer.println("Updating the last value associated to each waiting tuple which referes to " + value.f0);
 			for (T tuple : this.tupleMetadata.keySet()) {
 				if (this.tupleMetadata.get(tuple).f0.equals(value.f0)) {
-					System.out.println("Found a waiting tuple of the main stream about " + value.f0 + ": " + tuple);
+					writer.println("Found a waiting tuple of the main stream about " + value.f0 + ": " + tuple);
 					if (this.tupleMetadata.get(tuple).f2 != null) {
 						if ((Long) t.get(value.f1) > (Long) t.get(this.tupleMetadata.get(tuple).f2)
 								&& (Long) t.get(value.f1) <= (Long) t.get(tuple)) {
-							System.out.println(
+							writer.println(
 									"The just received tuple has a timestamp which is older than the waiting tuple but newer than the currently associated last value. Updating last value associated to the waiting tuple.");
 							this.tupleMetadata.put(tuple,
 									new Tuple3<>(value.f0, this.tupleMetadata.get(tuple).f1, value.f1));
-							System.out.println("Updated last value: " + this.tupleMetadata.get(tuple).f2);
+							writer.println("Updated last value: " + this.tupleMetadata.get(tuple).f2);
 						} else {
-							System.out.println(
+							writer.println(
 									"The just received tuple has a timestamp which is either newer than the waiting tuple or older than the currently associated last value. No update.");
 						}
 					} else {
-						System.out.println("There is no previous last value from stream " + this.associatedStream
+						writer.println("There is no previous last value from stream " + this.associatedStream
 								+ " associated to the waiting tuple");
 						if ((Long) t.get(value.f1) <= (Long) t.get(tuple)) {
-							System.out.println(
+							writer.println(
 									"The just received tuple has a timestamp which is older than the waiting tuple. Updating last value associated to the waiting tuple.");
 
 							this.tupleMetadata.put(tuple,
 									new Tuple3<>(value.f0, this.tupleMetadata.get(tuple).f1, value.f1));
 						} else {
-							System.out.println(
+							writer.println(
 									"The just received tuple has a timestamp which is newer than the waiting tuple. No update.");
 						}
 					}
 				}
 			}
 
-			System.out.println("Updating the most recent value which has been globally seen for stream "
+			writer.println("Updating the most recent value which has been globally seen for stream "
 					+ this.associatedStream + " and data subject " + value.f0);
 			if (this.lastValuePerSubject.get(value.f0) != null) {
-				System.out.println("There is already a previous value.");
+				writer.println("There is already a previous value.");
 				if ((Long) t.get(value.f1) > (Long) t.get(this.lastValuePerSubject.get(value.f0))) {
-					System.out.println("The previous value is older than the one just received. Updating.");
+					writer.println("The previous value is older than the one just received. Updating.");
 					this.lastValuePerSubject.put(value.f0, value.f1);
 				} else {
-					System.out.println("The previous value is newer than the one just received. Non updating.");
+					writer.println("The previous value is newer than the one just received. Non updating.");
 				}
 			} else {
-				System.out.println("There is no previous value. Updating");
+				writer.println("There is no previous value. Updating");
 				this.lastValuePerSubject.put(value.f0, value.f1);
 			}
-			System.out.println("Updated value: " + this.lastValuePerSubject.get(value.f0));
+			writer.println("Updated value: " + this.lastValuePerSubject.get(value.f0));
 
 		}
 	}
@@ -828,6 +894,7 @@ public class SubjectSpecificConditionChecker<T, S> extends
 
 	public void setAssociatedStream(int associatedStream) {
 		this.associatedStream = associatedStream;
+
 	}
 
 	public void setDsWithAtLeastOneCondition(HashSet<String> dsWithAtLeastOnePolicy) {
@@ -835,8 +902,21 @@ public class SubjectSpecificConditionChecker<T, S> extends
 	}
 
 	@Override
+	public void open(Configuration parameters) throws Exception {
+		try {
+			this.writer = new PrintWriter(
+					"experiments_ide/subject-specific-condition-checker-" + this.associatedStream + ".log", "UTF-8");
+		} catch (FileNotFoundException | UnsupportedEncodingException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		super.open(parameters);
+	}
+
+	@Override
 	public void close() throws Exception {
 		scheduler.shutdown();
+		this.writer.close();
 		super.close();
 	}
 

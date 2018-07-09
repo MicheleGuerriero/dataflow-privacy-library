@@ -1,4 +1,4 @@
-package library;
+package it.deib.polimi.diaprivacy.library;
 
 import java.io.Serializable;
 

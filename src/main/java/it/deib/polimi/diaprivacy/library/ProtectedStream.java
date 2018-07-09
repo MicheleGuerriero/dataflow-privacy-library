@@ -1,10 +1,9 @@
-package library;
+package it.deib.polimi.diaprivacy.library;
 
 import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
 import org.apache.flink.api.common.functions.MapFunction;
 import org.apache.flink.api.java.tuple.Tuple2;
@@ -12,13 +11,18 @@ import org.apache.flink.api.java.tuple.Tuple3;
 import org.apache.flink.streaming.api.datastream.DataStream;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 
+import it.deib.polimi.diaprivacy.model.ApplicationDataStream;
+import it.deib.polimi.diaprivacy.model.ApplicationPrivacy;
 import it.deib.polimi.diaprivacy.model.ContextualCondition;
+import it.deib.polimi.diaprivacy.model.DSEP;
 import it.deib.polimi.diaprivacy.model.GeneralizationVector;
 import it.deib.polimi.diaprivacy.model.PastCondition;
 import it.deib.polimi.diaprivacy.model.PrivacyContext;
+import it.deib.polimi.diaprivacy.model.PrivacyPolicy;
+import it.deib.polimi.diaprivacy.model.VCP;
 import scala.collection.mutable.HashSet;
 
-public class MaskedStream<T> {
+public class ProtectedStream<T> {
 
 	private Integer topologyParallelism;
 	private Boolean simulateRealisticScenario;
@@ -27,7 +31,7 @@ public class MaskedStream<T> {
 
 	private DataStream<Tuple3<String, T, List<Boolean>>> intermediateStream;
 
-	private MaskBuilder<T> viewBuilder;
+	private PolicyActuator<T> policyActuator;
 
 	private ConditionChecker<T, ?> lastPcc;
 
@@ -41,16 +45,16 @@ public class MaskedStream<T> {
 
 	private HashSet<String> dsWithAtLeastOnePastCondition;
 
-	public MaskedStream() {
+	public ProtectedStream() {
 
 	}
 
-	public MaskedStream(String timestampServerIp, Integer timestampServerPort, Integer topologyParallelism,
+	public ProtectedStream(String timestampServerIp, Integer timestampServerPort, Integer topologyParallelism,
 			Boolean simulateRealisticScenario, Integer allowedLateness) {
 		this.simulateRealisticScenario = simulateRealisticScenario;
 		this.allowedLateness = allowedLateness;
 		this.topologyParallelism = topologyParallelism;
-		this.viewBuilder = new MaskBuilder<T>(timestampServerIp, timestampServerPort);
+		this.policyActuator = new PolicyActuator<T>(timestampServerIp, timestampServerPort);
 		this.nPastConditionCheckers = 0;
 		this.lastPcc = null;
 		this.lastOtherDataSubjectSpecificStream = null;
@@ -59,28 +63,65 @@ public class MaskedStream<T> {
 		this.dsWithAtLeastOnePastCondition = new HashSet<String>();
 	}
 
+	public void addDSEP(ApplicationDataStream protectedStream, DSEP dsep, ApplicationPrivacy app) {
+		
+		this.setPolicyContext(protectedStream, dsep, app);
+		
+		this.policyActuator.addDsWithEvictionPolicy(dsep.getDataSubject());
+	}
+
+	public void addVCP(ApplicationDataStream protectedStream, VCP vcp, ApplicationPrivacy app) {
+
+		this.setPolicyContext(protectedStream, vcp, app);
+
+		this.policyActuator.setGeneralizationVector(vcp.getDataSubject(), vcp.getGeneralizationVector());
+
+	}
+
 	@SuppressWarnings("unchecked")
-	public void addPolicy(String ds, Map<DataStream<?>, PastCondition> subjectSpecificPastConditions,
-			Map<DataStream<?>, PastCondition> genericPastConditions,
-			Map<DataStream<?>, ContextualCondition> subjectSpecificStaticConditions,
-			Map<DataStream<?>, ContextualCondition> genericStaticConditions, PrivacyContext privacyContext,
-			List<ContextualCondition> protectedStreamConds, GeneralizationVector gv) {
+	private void setPolicyContext(ApplicationDataStream protectedStream, PrivacyPolicy vcp, ApplicationPrivacy app) {
 
 		boolean pccAlreadyExists;
-		for (DataStream<?> pastConditionedStream : subjectSpecificPastConditions.keySet()) {
+
+		String ds = vcp.getDataSubject();
+		Map<DataStream<?>, PastCondition> subjectSpecificPastConditions = vcp.getSubjectSpecificPastConditions(app);
+		Map<DataStream<?>, PastCondition> genericPastConditions = vcp.getGenericPastConditions(app);
+		Map<DataStream<?>, ContextualCondition> subjectSpecificStaticConditions = vcp
+				.getSubjectSpecificStaticConditions(app);
+		Map<DataStream<?>, ContextualCondition> genericStaticConditions = vcp.getGenericStaticConditions(app);
+		List<ContextualCondition> protectedStreamConds = vcp.getProtectedStreamConds(app, protectedStream);
+
+		for (DataStream<?> conditionedStream : subjectSpecificStaticConditions.keySet()) {
 			pccAlreadyExists = false;
 			for (SubjectSpecificConditionChecker<T, ?> pcc : addedSubjectSpecificPccs) {
-				if (pcc.getAssociatedStream() == pastConditionedStream.getId()) {
-					pcc.addPastCondition(ds, subjectSpecificPastConditions.get(pastConditionedStream));
+				if (pcc.getAssociatedStream() == conditionedStream.getId()) {
+					pcc.addStaticCondition(ds, subjectSpecificStaticConditions.get(conditionedStream));
 					pccAlreadyExists = true;
 				}
 			}
 
 			if (!pccAlreadyExists) {
-				SubjectSpecificConditionChecker<T, ?> pcc = this.addSubjectSpecificStreamCondition(
-						pastConditionedStream, ds, subjectSpecificPastConditions.get(pastConditionedStream));
-				pcc.setAssociatedStream(pastConditionedStream.getId());
+				SubjectSpecificConditionChecker<T, ?> pcc = this.addSubjectSpecificStreamCondition(conditionedStream,
+						ds, subjectSpecificStaticConditions.get(conditionedStream));
+				pcc.setAssociatedStream(conditionedStream.getId());
 				this.addedSubjectSpecificPccs.add(pcc);
+			}
+		}
+
+		for (DataStream<?> conditionedStream : genericStaticConditions.keySet()) {
+			pccAlreadyExists = false;
+			for (GenericConditionChecker<T, ?> pcc : addedGenericPccs) {
+				if (pcc.getAssociatedStream() == conditionedStream.getId()) {
+					pcc.addStaticCondition(ds, genericStaticConditions.get(conditionedStream));
+					pccAlreadyExists = true;
+				}
+			}
+
+			if (!pccAlreadyExists) {
+				GenericConditionChecker<T, ?> pcc = this.addGenericStreamCondition(conditionedStream, ds,
+						genericStaticConditions.get(conditionedStream));
+				pcc.setAssociatedStream(conditionedStream.getId());
+				this.addedGenericPccs.add(pcc);
 
 			}
 		}
@@ -103,6 +144,42 @@ public class MaskedStream<T> {
 			}
 		}
 
+		for (DataStream<?> pastConditionedStream : subjectSpecificPastConditions.keySet()) {
+			pccAlreadyExists = false;
+			for (SubjectSpecificConditionChecker<T, ?> pcc : addedSubjectSpecificPccs) {
+				if (pcc.getAssociatedStream() == pastConditionedStream.getId()) {
+					pcc.addPastCondition(ds, subjectSpecificPastConditions.get(pastConditionedStream));
+					pccAlreadyExists = true;
+				}
+			}
+
+			if (!pccAlreadyExists) {
+				SubjectSpecificConditionChecker<T, ?> pcc = this.addSubjectSpecificStreamCondition(
+						pastConditionedStream, ds, subjectSpecificPastConditions.get(pastConditionedStream));
+				pcc.setAssociatedStream(pastConditionedStream.getId());
+				this.addedSubjectSpecificPccs.add(pcc);
+
+			}
+		}
+
+		this.setContextualPattern(ds, vcp.getPrivacyContext(), protectedStreamConds);
+		if ((subjectSpecificPastConditions != null && !subjectSpecificPastConditions.isEmpty())
+				|| (genericPastConditions != null && !genericPastConditions.isEmpty())
+				|| (subjectSpecificStaticConditions != null && !subjectSpecificStaticConditions.isEmpty())
+				|| (genericStaticConditions != null && !genericStaticConditions.isEmpty())) {
+			this.dsWithAtLeastOnePastCondition.add(ds);
+		}
+	}
+
+	@SuppressWarnings("unchecked")
+	public void addVCP(String ds, Map<DataStream<?>, PastCondition> subjectSpecificPastConditions,
+			Map<DataStream<?>, PastCondition> genericPastConditions,
+			Map<DataStream<?>, ContextualCondition> subjectSpecificStaticConditions,
+			Map<DataStream<?>, ContextualCondition> genericStaticConditions, PrivacyContext privacyContext,
+			List<ContextualCondition> protectedStreamConds, GeneralizationVector gv) {
+
+		boolean pccAlreadyExists;
+
 		for (DataStream<?> conditionedStream : subjectSpecificStaticConditions.keySet()) {
 			pccAlreadyExists = false;
 			for (SubjectSpecificConditionChecker<T, ?> pcc : addedSubjectSpecificPccs) {
@@ -120,7 +197,7 @@ public class MaskedStream<T> {
 
 			}
 		}
-		
+
 		for (DataStream<?> conditionedStream : genericStaticConditions.keySet()) {
 			pccAlreadyExists = false;
 			for (GenericConditionChecker<T, ?> pcc : addedGenericPccs) {
@@ -139,14 +216,52 @@ public class MaskedStream<T> {
 			}
 		}
 
+		for (DataStream<?> pastConditionedStream : genericPastConditions.keySet()) {
+			pccAlreadyExists = false;
+			for (GenericConditionChecker<T, ?> pcc : addedGenericPccs) {
+				if (pcc.getAssociatedStream() == pastConditionedStream.getId()) {
+					pcc.addPastCondition(ds, genericPastConditions.get(pastConditionedStream));
+					pccAlreadyExists = true;
+				}
+			}
+
+			if (!pccAlreadyExists) {
+				GenericConditionChecker<T, ?> pcc = this.addGenericStreamCondition(pastConditionedStream, ds,
+						genericPastConditions.get(pastConditionedStream));
+				pcc.setAssociatedStream(pastConditionedStream.getId());
+				this.addedGenericPccs.add(pcc);
+
+			}
+		}
+
+		for (DataStream<?> pastConditionedStream : subjectSpecificPastConditions.keySet()) {
+			pccAlreadyExists = false;
+			for (SubjectSpecificConditionChecker<T, ?> pcc : addedSubjectSpecificPccs) {
+				if (pcc.getAssociatedStream() == pastConditionedStream.getId()) {
+					pcc.addPastCondition(ds, subjectSpecificPastConditions.get(pastConditionedStream));
+					pccAlreadyExists = true;
+				}
+			}
+
+			if (!pccAlreadyExists) {
+				SubjectSpecificConditionChecker<T, ?> pcc = this.addSubjectSpecificStreamCondition(
+						pastConditionedStream, ds, subjectSpecificPastConditions.get(pastConditionedStream));
+				pcc.setAssociatedStream(pastConditionedStream.getId());
+				this.addedSubjectSpecificPccs.add(pcc);
+
+			}
+		}
+
 		this.setContextualPattern(ds, privacyContext, protectedStreamConds);
-		this.addGeneralizationVector(ds, gv);
 		if ((subjectSpecificPastConditions != null && !subjectSpecificPastConditions.isEmpty())
 				|| (genericPastConditions != null && !genericPastConditions.isEmpty())
 				|| (subjectSpecificStaticConditions != null && !subjectSpecificStaticConditions.isEmpty())
 				|| (genericStaticConditions != null && !genericStaticConditions.isEmpty())) {
 			this.dsWithAtLeastOnePastCondition.add(ds);
 		}
+		
+		this.policyActuator.setGeneralizationVector(ds, gv);
+
 	}
 
 	public void setStreamToProtect(DataStream<T> toProtect) {
@@ -165,24 +280,20 @@ public class MaskedStream<T> {
 	}
 
 	public void addGeneralizationFunction(String attribute, Integer level, GeneralizationFunction f) {
-		this.viewBuilder.setGeneralizationLevel(attribute, level, f);
+		this.policyActuator.setGeneralizationLevel(attribute, level, f);
 	}
-
-	private void addGeneralizationVector(String dataSubject, GeneralizationVector gv) {
-		this.viewBuilder.setGeneralizationVector(dataSubject, gv);
-	}
-
+	
 	private void setContextualPattern(String dataSubject, PrivacyContext pc, List<ContextualCondition> conds) {
-		this.viewBuilder.setPrivacyContextPreference(dataSubject, pc);
+		this.policyActuator.setPrivacyContextPreference(dataSubject, pc);
 		for (ContextualCondition c : conds) {
-			this.viewBuilder.setProtectedStreamPreference(dataSubject, c);
+			this.policyActuator.setProtectedStreamPreference(dataSubject, c);
 		}
 	}
 
-	@SuppressWarnings("unchecked")
+	@SuppressWarnings({ "unchecked", "rawtypes" })
 	private <S> SubjectSpecificConditionChecker addSubjectSpecificStreamCondition(
 			DataStream<S> otherDataSubjectSpecificStream, String ds, ContextualCondition cond) {
-		
+
 		if (lastPcc != null && lastOtherDataSubjectSpecificStream != null) {
 			if (isLastPccSubjectSpecific) {
 				DataStream<S> tmp = (DataStream<S>) this.lastOtherDataSubjectSpecificStream;
@@ -227,10 +338,10 @@ public class MaskedStream<T> {
 		return pastPolicyChecker;
 	}
 
-	@SuppressWarnings("unchecked")
+	@SuppressWarnings({ "unchecked", "rawtypes" })
 	private <S> GenericConditionChecker addGenericStreamCondition(DataStream<S> otherGenericStream, String ds,
 			ContextualCondition cond) {
-		
+
 		if (lastPcc != null && lastOtherDataSubjectSpecificStream != null) {
 			if (isLastPccSubjectSpecific) {
 				DataStream<S> tmp = (DataStream<S>) this.lastOtherDataSubjectSpecificStream;
@@ -317,7 +428,7 @@ public class MaskedStream<T> {
 
 		return this.intermediateStream.connect(contextStream.broadcast())
 				// .keyBy(_._1, _.serviceUser)
-				.flatMap(this.viewBuilder).setParallelism(topologyParallelism);
+				.flatMap(this.policyActuator).setParallelism(topologyParallelism);
 	}
 
 }

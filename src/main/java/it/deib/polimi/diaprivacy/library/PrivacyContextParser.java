@@ -1,4 +1,4 @@
-package library;
+package it.deib.polimi.diaprivacy.library;
 
 import org.apache.flink.api.common.functions.RichMapFunction;
 import org.apache.flink.configuration.Configuration;

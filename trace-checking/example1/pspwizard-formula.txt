@@ -1,0 +1,57 @@
+EVENTUALLY (s1('ds1',c1, c1org) AND NOT c1=-1 )
+IMPLIES (
+NOT(
+c1org > 130 AND
+
+(ONCE[0,*] s3('ds1',c3) AND c3 > 130) AND
+(NOT EXISTS c3l. (s3('ds1',c3l) AND NOT c3l > 130) SINCE[0,*] (s3('ds1',c3) AND c3 > 130)) AND
+
+(ONCE[0,*] s5(c5) AND c5 > 130) AND
+(NOT EXISTS c5l. (s5(c5l) AND NOT c5l > 130) SINCE[0,*] (s5(c5) AND c5 > 130)) AND
+
+(ONCE[0,*] context('u1')) AND
+(NOT EXISTS cx1. (context(cx1) AND NOT cx1='u1') SINCE[0,*] context('u1')) AND
+
+(ONCE[0,300] s2('ds1',c2) AND c2 > 130) AND
+
+(ONCE[0,300] s4(c4) AND c4 > 130)
+) UNTIL (
+s1('ds1',c1, c1org) AND NOT c1=-1 
+) OR 
+ALWAYS (
+NOT(
+c1org > 130 AND
+
+(ONCE[0,*] s3('ds1',c3) AND c3 > 130) AND
+(NOT EXISTS c3l. (s3('ds1',c3l) AND NOT c3l > 130) SINCE[0,*] (s3('ds1',c3) AND c3 > 130)) AND
+
+(ONCE[0,*] s5(c5) AND c5 > 130) AND
+(NOT EXISTS c5l. (s5(c5l) AND NOT c5l > 130) SINCE[0,*] (s5(c5) AND c5 > 130)) AND
+
+(ONCE[0,*] context('u1')) AND
+(NOT EXISTS cx1. (context(cx1) AND NOT cx1='u1') SINCE[0,*] context('u1')) AND
+
+(ONCE[0,300] s2('ds1',c2) AND c2 > 130) AND
+
+(ONCE[0,300] s4(c4) AND c4 > 130)
+)
+)
+)
+
+
+s1('ds1',c1, c1org) AND c1org > 130 AND NOT c1=-1 
+IMPLIES NOT (
+
+(ONCE[0,*] s3('ds1',c3) AND c3 > 130) AND
+(NOT EXISTS c3l. (s3('ds1',c3l) AND NOT c3l > 130) SINCE[0,*] (s3('ds1',c3) AND c3 > 130)) AND
+
+(ONCE[0,*] s5(c5) AND c5 > 130) AND
+(NOT EXISTS c5l. (s5(c5l) AND NOT c5l > 130) SINCE[0,*] (s5(c5) AND c5 > 130)) AND
+
+(ONCE[0,*] context('u1')) AND
+(NOT EXISTS cx1. (context(cx1) AND NOT cx1='u1') SINCE[0,*] context('u1')) AND
+
+(ONCE[0,300] s2('ds1',c2) AND c2 > 130) AND
+
+(ONCE[0,300] s4(c4) AND c4 > 130)
+)

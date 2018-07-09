@@ -1,17 +1,22 @@
-package library;
+package it.deib.polimi.diaprivacy.library;
 
 import org.apache.flink.util.Collector;
 import org.apache.flink.api.java.tuple.Tuple3;
+import org.apache.flink.configuration.Configuration;
 
 import it.deib.polimi.diaprivacy.model.PrivacyContext;
 import it.deib.polimi.diaprivacy.model.GeneralizationVector;
 
+import java.io.IOException;
 import java.io.PrintStream;
 import java.lang.reflect.Field;
+import java.net.InetAddress;
+import java.net.Socket;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
@@ -22,6 +27,8 @@ public class MaskBuilder<T> extends PolicyActuator<T> {
 	private static final long serialVersionUID = 5567870391226738600L;
 
 	private Map<String, GeneralizationVector> generalizationVectors;
+	
+	private Set<String> dsWithEvictionPolicy;
 
 	// to check how this is built up
 	private Map<GeneralizationLevel, GeneralizationFunction> generalizationHierarchy;
@@ -36,66 +43,6 @@ public class MaskBuilder<T> extends PolicyActuator<T> {
 		super(timestampServerIp, timestampServerPort);
 		this.generalizationVectors = new HashMap<String, GeneralizationVector>();
 		this.generalizationHierarchy = new HashMap<GeneralizationLevel, GeneralizationFunction>();
-	}
-
-	@Override
-	public void flatMap1(Tuple3<String, T, List<Boolean>> value, Collector<T> out) throws Exception {
-		if (this.generalizationVectors.containsKey(value.f0)) {
-			if (value.f2.isEmpty()) {
-				if (super.matchContext(value.f0, value.f1)) {
-					GeneralizationVector gv = this.generalizationVectors.get(value.f0);
-					for (String a : gv.getVector().keySet()) {
-						Field field = value.f1.getClass().getDeclaredField(a);
-						field.setAccessible(true);
-						Object finalVal = field.get(value.f1);
-						for (int i = 1; i < gv.getVariableGenLevel(a); i++) {
-							finalVal = this.getGeneralizationFunction(a, i).apply(finalVal);
-						}
-						field.set(value.f1, finalVal);
-					}
-				}
-			} else {
-				if (this.privacyContextPreferences.containsKey(value.f0)) {
-					if (this.internalFold(value.f2, true) && this.matchContext(value.f0, value.f1)) {
-						GeneralizationVector gv = this.generalizationVectors.get(value.f0);
-						for (String a : gv.getVector().keySet()) {
-							Field field = value.f1.getClass().getDeclaredField(a);
-							field.setAccessible(true);
-							Object finalVal = field.get(value.f1);
-
-							for (int i = 1; i <= gv.getVariableGenLevel(a); i++) {
-								finalVal = this.getGeneralizationFunction(a, i).apply(finalVal);
-							}
-							field.set(value.f1, finalVal);
-						}
-					}
-				} else {
-					if (this.internalFold(value.f2, true)) {
-						GeneralizationVector gv = this.generalizationVectors.get(value.f0);
-						for (String a : gv.getVector().keySet()) {
-							Field field = value.f1.getClass().getDeclaredField(a);
-							field.setAccessible(true);
-							Object finalVal = field.get(value.f1);
-							for (int i = 1; i < gv.getVariableGenLevel(a); i++) {
-								finalVal = this.getGeneralizationFunction(a, i).apply(finalVal);
-							}
-							field.set(value.f1, finalVal);
-						}
-					}
-				}
-			}
-		}
-
-		Field tId = value.f1.getClass().getDeclaredField("tupleId");
-		tId.setAccessible(true);
-		out.collect(value.f1);
-		PrintStream socketWriter = new PrintStream(socket.getOutputStream());
-		socketWriter.println(tId.get(value.f1) + "_end");
-	}
-
-	@Override
-	public void flatMap2(PrivacyContext value, Collector<T> out) throws Exception {
-		this.currentContext = value;
 	}
 
 	public Map<String, GeneralizationVector> getGeneralizationVectors() {
@@ -135,13 +82,83 @@ public class MaskBuilder<T> extends PolicyActuator<T> {
 		return null;
 	}
 
-	private Boolean internalFold(List<Boolean> toFold, Boolean base) {
-		Boolean result = base;
-		for (Boolean b : toFold) {
-			result = result && b;
+	@Override
+	public void flatMap1(Tuple3<String, T, List<Boolean>> value, Collector<T> out) throws Exception {
+		if (this.generalizationVectors.containsKey(value.f0)) {
+			if (value.f2.isEmpty()) {
+				if (this.privacyContextPreferences.containsKey(value.f0)) {
+					if (this.matchContext(value.f0, value.f1)) {
+						GeneralizationVector gv = this.generalizationVectors.get(value.f0);
+						for (String a : gv.getVector().keySet()) {
+							Field field = value.f1.getClass().getDeclaredField(a);
+							field.setAccessible(true);
+							Object finalVal = field.get(value.f1);
+							for (int i = 1; i < gv.getVariableGenLevel(a); i++) {
+								finalVal = this.getGeneralizationFunction(a, i).apply(finalVal);
+							}
+							field.set(value.f1, finalVal);
+						}
+					}
+				}
+			} else {
+				if (this.privacyContextPreferences.containsKey(value.f0)) {
+					if (this.internalFold(value.f2, true) && this.matchContext(value.f0, value.f1)) {
+						GeneralizationVector gv = this.generalizationVectors.get(value.f0);
+						for (String a : gv.getVector().keySet()) {
+							Field field = value.f1.getClass().getDeclaredField(a);
+							field.setAccessible(true);
+							Object finalVal = field.get(value.f1);
+							for (int i = 1; i < gv.getVariableGenLevel(a); i++) {
+								finalVal = this.getGeneralizationFunction(a, i).apply(finalVal);
+							}
+							field.set(value.f1, finalVal);
+						}
+					}
+				} else {
+					if (this.internalFold(value.f2, true)) {
+						GeneralizationVector gv = this.generalizationVectors.get(value.f0);
+						for (String a : gv.getVector().keySet()) {
+							Field field = value.f1.getClass().getDeclaredField(a);
+							field.setAccessible(true);
+							Object finalVal = field.get(value.f1);
+							for (int i = 1; i < gv.getVariableGenLevel(a); i++) {
+								finalVal = this.getGeneralizationFunction(a, i).apply(finalVal);
+							}
+							field.set(value.f1, finalVal);
+						}
+					}
+				}
+			}
+
+		} else {
+			boolean result = false;
+			if (value.f2.isEmpty()) {
+				if (this.privacyContextPreferences.containsKey(value.f0)) {
+					if (this.matchContext(value.f0, value.f1)) {
+						result = true;
+					}
+				}
+			} else {
+				if (this.privacyContextPreferences.containsKey(value.f0)) {
+					if (this.internalFold(value.f2, true) && this.matchContext(value.f0, value.f1)) {
+						result = true;
+					}
+				} else {
+					if (this.internalFold(value.f2, true)) {
+						result = true;
+					}
+				}
+			}
+			
+			if(!result) {
+				out.collect(value.f1);
+			}
 		}
-
-		return result;
+		
+		Field tId = value.f1.getClass().getDeclaredField("tupleId");
+		tId.setAccessible(true);
+		out.collect(value.f1);
+		PrintStream socketWriter = new PrintStream(socket.getOutputStream());
+		socketWriter.println(tId.get(value.f1) + "_end");
 	}
-
 }

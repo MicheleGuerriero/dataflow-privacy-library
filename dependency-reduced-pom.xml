@@ -1,11 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
   <modelVersion>4.0.0</modelVersion>
-  <groupId>org.apache.flink.quickstart</groupId>
-  <artifactId>flink-java-project</artifactId>
-  <name>Flink Quickstart Job</name>
+  <groupId>it.deib.polimi.diaprivacy</groupId>
+  <artifactId>dia-privacy-library</artifactId>
+  <name>DIA Privacy Library</name>
   <version>0.1</version>
-  <url>http://www.myorganization.org</url>
   <build>
     <pluginManagement>
       <plugins>
@@ -149,6 +148,10 @@
               <artifactId>commons-compress</artifactId>
               <groupId>org.apache.commons</groupId>
             </exclusion>
+            <exclusion>
+              <artifactId>snappy-java</artifactId>
+              <groupId>org.xerial.snappy</groupId>
+            </exclusion>
           </exclusions>
         </dependency>
         <dependency>
@@ -267,6 +270,10 @@
         <exclusion>
           <artifactId>commons-compress</artifactId>
           <groupId>org.apache.commons</groupId>
+        </exclusion>
+        <exclusion>
+          <artifactId>snappy-java</artifactId>
+          <groupId>org.xerial.snappy</groupId>
         </exclusion>
       </exclusions>
     </dependency>

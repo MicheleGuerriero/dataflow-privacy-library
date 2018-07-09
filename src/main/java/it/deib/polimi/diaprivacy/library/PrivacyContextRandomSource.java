@@ -1,4 +1,4 @@
-package example1.utils;
+package it.deib.polimi.diaprivacy.library;
 
 import java.util.ArrayList;
 import java.util.List;
