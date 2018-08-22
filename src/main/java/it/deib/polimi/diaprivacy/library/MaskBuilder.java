@@ -2,25 +2,13 @@ package it.deib.polimi.diaprivacy.library;
 
 import org.apache.flink.util.Collector;
 import org.apache.flink.api.java.tuple.Tuple3;
-import org.apache.flink.configuration.Configuration;
-
-import it.deib.polimi.diaprivacy.model.PrivacyContext;
 import it.deib.polimi.diaprivacy.model.GeneralizationVector;
-
-import java.io.IOException;
 import java.io.PrintStream;
 import java.lang.reflect.Field;
-import java.net.InetAddress;
-import java.net.Socket;
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.ScheduledFuture;
-import java.util.concurrent.TimeUnit;
 
 public class MaskBuilder<T> extends PolicyActuator<T> {
 
@@ -39,8 +27,8 @@ public class MaskBuilder<T> extends PolicyActuator<T> {
 		this.generalizationHierarchy = new HashMap<GeneralizationLevel, GeneralizationFunction>();
 	}
 
-	public MaskBuilder(String timestampServerIp, Integer timestampServerPort) {
-		super(timestampServerIp, timestampServerPort);
+	public MaskBuilder(boolean monitoringActive, String timestampServerIp, Integer timestampServerPort) {
+		super(timestampServerIp, timestampServerPort, monitoringActive);
 		this.generalizationVectors = new HashMap<String, GeneralizationVector>();
 		this.generalizationHierarchy = new HashMap<GeneralizationLevel, GeneralizationFunction>();
 	}
@@ -158,7 +146,9 @@ public class MaskBuilder<T> extends PolicyActuator<T> {
 		Field tId = value.f1.getClass().getDeclaredField("tupleId");
 		tId.setAccessible(true);
 		out.collect(value.f1);
-		PrintStream socketWriter = new PrintStream(socket.getOutputStream());
-		socketWriter.println(tId.get(value.f1) + "_end");
+		if(this.monitoringActive) {
+			PrintStream socketWriter = new PrintStream(socket.getOutputStream());
+			socketWriter.println(tId.get(value.f1) + "_end");	
+		}
 	}
 }

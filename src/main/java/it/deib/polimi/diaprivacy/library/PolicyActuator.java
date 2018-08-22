@@ -42,6 +42,8 @@ public class PolicyActuator<T> extends RichCoFlatMapFunction<Tuple3<String, T, L
 
 	protected Integer timestampServerPort;
 
+	protected boolean monitoringActive;
+
 	protected Socket socket;
 
 	public PolicyActuator() {
@@ -53,7 +55,8 @@ public class PolicyActuator<T> extends RichCoFlatMapFunction<Tuple3<String, T, L
 		this.protectedStreamPreferences = new HashMap<String, List<ContextualCondition>>();
 	}
 
-	public PolicyActuator(String timestampServerIp, Integer timestampServerPort) {
+	public PolicyActuator(String timestampServerIp, Integer timestampServerPort, boolean monitoringActive) {
+		this.monitoringActive = monitoringActive;
 		this.timestampServerIp = timestampServerIp;
 		this.timestampServerPort = timestampServerPort;
 		this.generalizationVectors = new HashMap<String, GeneralizationVector>();
@@ -179,8 +182,10 @@ public class PolicyActuator<T> extends RichCoFlatMapFunction<Tuple3<String, T, L
 			Field tId = value.f1.getClass().getDeclaredField("tupleId");
 			tId.setAccessible(true);
 			out.collect(value.f1);
-			PrintStream socketWriter = new PrintStream(socket.getOutputStream());
-			socketWriter.println(tId.get(value.f1) + "_end");
+			if (this.monitoringActive) {
+				PrintStream socketWriter = new PrintStream(socket.getOutputStream());
+				socketWriter.println(tId.get(value.f1) + "_end");
+			}
 
 		} else if (this.dsWithEvictionPolicy.contains(value.f0)) {
 			System.out.println("Deciding if to tuple " + value.f1 + " has to be evicted or not.");
@@ -207,25 +212,31 @@ public class PolicyActuator<T> extends RichCoFlatMapFunction<Tuple3<String, T, L
 				Field tId = value.f1.getClass().getDeclaredField("tupleId");
 				tId.setAccessible(true);
 				out.collect(value.f1);
-				PrintStream socketWriter = new PrintStream(socket.getOutputStream());
-				socketWriter.println(tId.get(value.f1) + "_end");
+				if (this.monitoringActive) {
+					PrintStream socketWriter = new PrintStream(socket.getOutputStream());
+					socketWriter.println(tId.get(value.f1) + "_end");
+				}
 			}
 		} else {
 			Field tId = value.f1.getClass().getDeclaredField("tupleId");
 			tId.setAccessible(true);
 			out.collect(value.f1);
-			PrintStream socketWriter = new PrintStream(socket.getOutputStream());
-			socketWriter.println(tId.get(value.f1) + "_end");
+			if (this.monitoringActive) {
+				PrintStream socketWriter = new PrintStream(socket.getOutputStream());
+				socketWriter.println(tId.get(value.f1) + "_end");
+			}
 		}
 	}
 
 	@Override
 	public void open(Configuration parameters) throws InterruptedException {
-		try {
-			this.socket = new Socket(InetAddress.getByName(timestampServerIp), timestampServerPort);
-		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
+		if (this.monitoringActive) {
+			try {
+				this.socket = new Socket(InetAddress.getByName(timestampServerIp), timestampServerPort);
+			} catch (IOException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
 		}
 	}
 
@@ -236,7 +247,9 @@ public class PolicyActuator<T> extends RichCoFlatMapFunction<Tuple3<String, T, L
 
 	@Override
 	public void close() throws Exception {
-		this.socket.close();
+		if (this.monitoringActive) {
+			this.socket.close();
+		}
 		super.close();
 	}
 

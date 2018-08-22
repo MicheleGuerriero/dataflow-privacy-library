@@ -894,7 +894,6 @@ public class SubjectSpecificConditionChecker<T, S> extends
 
 	public void setAssociatedStream(int associatedStream) {
 		this.associatedStream = associatedStream;
-
 	}
 
 	public void setDsWithAtLeastOneCondition(HashSet<String> dsWithAtLeastOnePolicy) {

@@ -49,12 +49,12 @@ public class ProtectedStream<T> {
 
 	}
 
-	public ProtectedStream(String timestampServerIp, Integer timestampServerPort, Integer topologyParallelism,
-			Boolean simulateRealisticScenario, Integer allowedLateness) {
+	public ProtectedStream(boolean monitoringActive, String timestampServerIp, Integer timestampServerPort,
+			Integer topologyParallelism, Boolean simulateRealisticScenario, Integer allowedLateness) {
 		this.simulateRealisticScenario = simulateRealisticScenario;
 		this.allowedLateness = allowedLateness;
 		this.topologyParallelism = topologyParallelism;
-		this.policyActuator = new PolicyActuator<T>(timestampServerIp, timestampServerPort);
+		this.policyActuator = new PolicyActuator<T>(timestampServerIp, timestampServerPort, monitoringActive);
 		this.nPastConditionCheckers = 0;
 		this.lastPcc = null;
 		this.lastOtherDataSubjectSpecificStream = null;
@@ -64,9 +64,9 @@ public class ProtectedStream<T> {
 	}
 
 	public void addDSEP(ApplicationDataStream protectedStream, DSEP dsep, ApplicationPrivacy app) {
-		
+
 		this.setPolicyContext(protectedStream, dsep, app);
-		
+
 		this.policyActuator.addDsWithEvictionPolicy(dsep.getDataSubject());
 	}
 
@@ -259,7 +259,7 @@ public class ProtectedStream<T> {
 				|| (genericStaticConditions != null && !genericStaticConditions.isEmpty())) {
 			this.dsWithAtLeastOnePastCondition.add(ds);
 		}
-		
+
 		this.policyActuator.setGeneralizationVector(ds, gv);
 
 	}
@@ -282,7 +282,7 @@ public class ProtectedStream<T> {
 	public void addGeneralizationFunction(String attribute, Integer level, GeneralizationFunction f) {
 		this.policyActuator.setGeneralizationLevel(attribute, level, f);
 	}
-	
+
 	private void setContextualPattern(String dataSubject, PrivacyContext pc, List<ContextualCondition> conds) {
 		this.policyActuator.setPrivacyContextPreference(dataSubject, pc);
 		for (ContextualCondition c : conds) {
