@@ -22,13 +22,13 @@ public class PrivacyContextFixedSource implements SourceFunction<PrivacyContext>
 		// TODO Auto-generated constructor stub
 	}
 
-	public PrivacyContextFixedSource(Integer initialDelay, Integer sleepTimeBeforeFinish) {
+	public PrivacyContextFixedSource(Integer initialDelay, Integer sleepTimeBeforeFinish, String fixedUser, String fixedRole, String fixesPurpose) {
 		this.initialDelay = initialDelay;
 		this.sleepTimeBeforeFinish = sleepTimeBeforeFinish;
 		
 		this.context = new ArrayList<Tuple2<PrivacyContext, Long>>();
 		context.add(new Tuple2<PrivacyContext, Long>(
-			new PrivacyContext("u1", "employee", "marketing", 800L), 0L));
+			new PrivacyContext(fixedUser, fixedRole, fixesPurpose, 800L), 0L));
 
 
 	}

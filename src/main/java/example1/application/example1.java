@@ -47,6 +47,7 @@ public class example1 {
 
 		String timestampServerIp = prop.getProperty("timestampServerIp");
 		String pathToResultFolder = prop.getProperty("pathToResultFolder");
+		Boolean monitoringActive = Boolean.parseBoolean(prop.getProperty("monitoringActive"));
 		Integer timestampServerPort = Integer.parseInt(prop.getProperty("timestampServerPort"));
 		Boolean privacyOn = Boolean.parseBoolean(prop.getProperty("privacyOn"));
 		Integer topologyParallelism = Integer.parseInt(prop.getProperty("topologyParallelism"));
@@ -66,6 +67,7 @@ public class example1 {
 		Integer minDelay = Integer.parseInt(prop.getProperty("minDelay"));
 		Integer maxDelay = Integer.parseInt(prop.getProperty("maxDelay"));
 		Integer allowedLateness = Integer.parseInt(prop.getProperty("allowedLateness"));
+		
 
 		Integer initialDelay = 0;
 		Boolean notNanoSeconds = false;
@@ -86,7 +88,7 @@ public class example1 {
 
 		ApplicationPrivacy app = yaml.loadAs(content, ApplicationPrivacy.class);
 
-		DataStreamSource<PrivacyContext> contextStream = env.addSource(new PrivacyContextFixedSource(0, 2000));
+		DataStreamSource<PrivacyContext> contextStream = env.addSource(new PrivacyContextFixedSource(0, 2000, "u1", "employee", "marketing"));
 
 		// APP
 		DataStream<SubjectSpecific> s2 = env.addSource(new SubjectSpecificRandomSource(initialDelay, nDataSubject,
@@ -126,7 +128,7 @@ public class example1 {
 		ApplicationDataStream app_s1 = app.getStreamByID("s1");
 		app_s1.setConcreteStream(s1);
 
-		ProtectedStream<SubjectSpecific> s1_p = new ProtectedStream<SubjectSpecific>(timestampServerIp,
+		ProtectedStream<SubjectSpecific> s1_p = new ProtectedStream<SubjectSpecific>(monitoringActive, timestampServerIp,
 				timestampServerPort, topologyParallelism, simulateRealisticScenario, allowedLateness);
 		s1_p.setStreamToProtect((DataStream<SubjectSpecific>) app_s1.getConcreteStream());
 
@@ -149,7 +151,7 @@ public class example1 {
 		// for each stream that goes into a sink and that is generic, than generate the stream
 		// and set all the policies
 		ApplicationDataStream app_s6 = app.getStreamByID("s6");
-		ProtectedStream<SubjectSpecific> s6_evicted_input = new ProtectedStream<SubjectSpecific>(timestampServerIp,
+		ProtectedStream<SubjectSpecific> s6_evicted_input = new ProtectedStream<SubjectSpecific>(monitoringActive, timestampServerIp,
 				timestampServerPort, topologyParallelism, simulateRealisticScenario, allowedLateness);
 		s6_evicted_input.setStreamToProtect(s2);
 
