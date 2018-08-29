@@ -92,8 +92,11 @@ public class SubjectSpecificConditionChecker<T, S> extends
 	public void flatMap1(Tuple3<String, T, List<Boolean>> value, Collector<Tuple3<String, T, List<Boolean>>> out)
 			throws Exception {
 
-		Field e = value.f1.getClass().getDeclaredField("eventTime");
-		e.setAccessible(true);
+		Field e1 = value.f1.getClass().getDeclaredField("eventTime");
+		e1.setAccessible(true);
+		
+		Field e2 = null;
+		
 		writer.println("Received tuple from the main stream: " + value.f1);
 
 		if (pastConditionPerDataSubject.containsKey(value.f0)) {
@@ -109,8 +112,12 @@ public class SubjectSpecificConditionChecker<T, S> extends
 					// content
 					List<Tuple2<String, S>> initWindow = new ArrayList<Tuple2<String, S>>();
 					for (Tuple2<String, S> t : retainedOtherStreamWindow) {
+						if (e2 == null) {
+							e2 = t.f1.getClass().getDeclaredField("eventTime");
+							e2.setAccessible(true);
+						}
 						if (t.f0.equals(value.f0)) {
-							if ((Long) e.get(t.f1) > (Long) e.get(value.f1) - cond.timeWindowMilliseconds()) {
+							if ((Long) e2.get(t.f1) > (Long) e1.get(value.f1) - cond.timeWindowMilliseconds()) {
 								initWindow.add(t);
 							}
 						}
@@ -124,7 +131,11 @@ public class SubjectSpecificConditionChecker<T, S> extends
 						while (iter.hasNext()) {
 							Tuple2<String, S> rt = iter.next();
 							if (rt.f0.equals(value.f0)) {
-								if ((Long) e.get(rt.f1) < (Long) e.get(this.lastValuePerSubject.get(value.f0))
+								if (e2 == null) {
+									e2 = rt.f1.getClass().getDeclaredField("eventTime");
+									e2.setAccessible(true);
+								}
+								if ((Long) e2.get(rt.f1) < (Long) e2.get(this.lastValuePerSubject.get(value.f0))
 										- pc.getUpperTemporalBound()) {
 									iter.remove();
 								}
@@ -146,8 +157,12 @@ public class SubjectSpecificConditionChecker<T, S> extends
 						if (this.lastValuePerSubject.get(value.f0) != null) {
 							writer.println("There exists already a value from stream " + this.associatedStream
 									+ " about " + value.f0);
+							if (e2 == null) {
+								e2 = this.lastValuePerSubject.get(value.f0).getClass().getDeclaredField("eventTime");
+								e2.setAccessible(true);
+							}
 							////////////////////////////// !!!!!!!!!!!!!!!!!!
-							if ((Long) e.get(value.f1) > (Long) e.get(this.lastValuePerSubject.get(value.f0))) {
+							if ((Long) e1.get(value.f1) > (Long) e2.get(this.lastValuePerSubject.get(value.f0))) {
 								writer.println(
 										"The existing value is older than the tuple from the  main stream just received. Setting this as value to be considered for static the condition.");
 								this.tupleMetadata.put(value.f1,
@@ -168,11 +183,11 @@ public class SubjectSpecificConditionChecker<T, S> extends
 									for (Tuple2<String, S> t : this.retainedOtherStreamLastValue) {
 										if (t.f0.equals(value.f0)) {
 											if (last == null) {
-												if ((Long) ts.get(t.f1) <= (Long) e.get(value.f1)) {
+												if ((Long) ts.get(t.f1) <= (Long) e1.get(value.f1)) {
 													last = t.f1;
 												}
 											} else {
-												if ((Long) ts.get(t.f1) <= (Long) e.get(value.f1)
+												if ((Long) ts.get(t.f1) <= (Long) e1.get(value.f1)
 														&& (Long) ts.get(t.f1) > (Long) ts.get(last)) {
 													last = t.f1;
 												}
