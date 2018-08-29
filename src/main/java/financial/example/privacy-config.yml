@@ -1,0 +1,45 @@
+!!it.deib.polimi.diaprivacy.model.ApplicationPrivacy
+policiesPerStream:
+  ? concreteStream: null
+    fields:
+    - {name: content}
+    id: s1
+    isSubjectSpecific: true
+    sourceId: null
+  : []
+  ? concreteStream: null
+    fields:
+    - {name: content}
+    id: s2
+    isSubjectSpecific: true
+    sourceId: null
+  : []
+  ? concreteStream: null
+    fields:
+    - {name: content}
+    id: s3
+    isSubjectSpecific: true
+    sourceId: null
+  : - !!it.deib.polimi.diaprivacy.model.VCP
+      dataSubject: Bob
+      generalization: 
+        content: 1
+      pastConditions:
+      - {lowerTemporalBound: 0, operator: GREATER, type: INTEGER, upperTemporalBound: 30,
+        value: 3, variable: nTransactions, containerStreamId: s2}
+      privacyContext: {purpose: analytics, role: employee, timestamp: -1, userId: MarketConsult}
+      segPolicy: It is always the case that if {user EQUAL MarketConsult} {role EQUAL employee} {purpose EQUAL analytics} {exists in stream s2 nTransaction GREATER than 3 between 0 and 30s from now} {last value of totalAmount in stream s3 GREATER than 100},  [have occurred] then {my data in s3 is not in clear} [holds].
+      simpleConditions:
+      - {operator: GREATER, type: INTEGER, value: 100, variable: totalAmount, containerStreamId: s3}
+  ? concreteStream: null
+    fields:
+    - {name: content}
+    id: s4
+    isSubjectSpecific: false
+    sourceId: null
+  : - !!it.deib.polimi.diaprivacy.model.DSEP
+      dataSubject: Bob
+      pastConditions: []
+      privacyContext: {purpose: analytics, timestamp: -1, userId: MarketConsult}
+      segPolicy: It is always the case that if {user EQUAL MarketConsult} {purpose EQUAL analytics} [have occurred] then {my data are not considered for computing s4} [holds].
+      simpleConditions: []
