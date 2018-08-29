@@ -666,8 +666,10 @@ public class SubjectSpecificConditionChecker<T, S> extends
 
 		writer.println("Received new tuple on stream " + this.associatedStream + ": " + value.f1);
 
-		Field t = value.f1.getClass().getDeclaredField("eventTime");
-		t.setAccessible(true);
+		Field t1 = value.f1.getClass().getDeclaredField("eventTime");
+		t1.setAccessible(true);
+		
+		Field t2 = null;
 
 		if (pastConditionPerDataSubject.containsKey(value.f0)) {
 
@@ -684,11 +686,16 @@ public class SubjectSpecificConditionChecker<T, S> extends
 
 				Field ds = tuple.getClass().getDeclaredField("dataSubject");
 				ds.setAccessible(true);
+				
+				if (t2 == null) {
+					t2 = tuple.getClass().getDeclaredField("eventTime");
+					t2.setAccessible(true);
+				}
 
 				if (value.f0.equals(ds.get(tuple))) {
 					writer.println("Found a waiting tuple of the main stream about " + value.f0 + ": " + tuple);
-					if ((Long) t.get(value.f1) >= (Long) t.get(tuple) - userPastEventPolicy.timeWindowMilliseconds()
-							&& (Long) t.get(value.f1) <= (Long) t.get(tuple)) {
+					if ((Long) t1.get(value.f1) >= (Long) t2.get(tuple) - userPastEventPolicy.timeWindowMilliseconds()
+							&& (Long) t1.get(value.f1) <= (Long) t2.get(tuple)) {
 						writer.println(
 								"The just received tuple has a timestamp which is older than the waiting tuple but within the window specified by the past condition. Updating the window associated to the waiting tuple.");
 						updatedList.add(value);
@@ -707,11 +714,15 @@ public class SubjectSpecificConditionChecker<T, S> extends
 
 			writer.println("Updating the last value associated to each waiting tuple which referes to " + value.f0);
 			for (T tuple : this.tupleMetadata.keySet()) {
+				if (t2 == null) {
+					t2 = tuple.getClass().getDeclaredField("eventTime");
+					t2.setAccessible(true);
+				}
 				if (this.tupleMetadata.get(tuple).f0.equals(value.f0)) {
 					writer.println("Found a waiting tuple of the main stream about " + value.f0 + ": " + tuple);
 					if (this.tupleMetadata.get(tuple).f2 != null) {
-						if ((Long) t.get(value.f1) > (Long) t.get(this.tupleMetadata.get(tuple).f2)
-								&& (Long) t.get(value.f1) <= (Long) t.get(tuple)) {
+						if ((Long) t1.get(value.f1) > (Long) t2.get(this.tupleMetadata.get(tuple).f2)
+								&& (Long) t1.get(value.f1) <= (Long) t2.get(tuple)) {
 							writer.println(
 									"The just received tuple has a timestamp which is older than the waiting tuple but newer than the currently associated last value. Updating last value associated to the waiting tuple.");
 							this.tupleMetadata.put(tuple,
@@ -724,7 +735,7 @@ public class SubjectSpecificConditionChecker<T, S> extends
 					} else {
 						writer.println("There is no previous last value from stream " + this.associatedStream
 								+ " associated to the waiting tuple");
-						if ((Long) t.get(value.f1) <= (Long) t.get(tuple)) {
+						if ((Long) t2.get(value.f1) <= (Long) t2.get(tuple)) {
 							writer.println(
 									"The just received tuple has a timestamp which is older than the waiting tuple. Updating last value associated to the waiting tuple.");
 
@@ -741,8 +752,12 @@ public class SubjectSpecificConditionChecker<T, S> extends
 			writer.println("Updating the most recent value which has been globally seen for stream "
 					+ this.associatedStream + " and data subject " + value.f0);
 			if (this.lastValuePerSubject.get(value.f0) != null) {
+				if (t2 == null) {
+					t2 = this.lastValuePerSubject.get(value.f0).getClass().getDeclaredField("eventTime");
+					t2.setAccessible(true);
+				}
 				writer.println("There is already a previous value.");
-				if ((Long) t.get(value.f1) > (Long) t.get(this.lastValuePerSubject.get(value.f0))) {
+				if ((Long) t1.get(value.f1) > (Long) t2.get(this.lastValuePerSubject.get(value.f0))) {
 					writer.println("The previous value is older than the one just received. Updating.");
 					this.lastValuePerSubject.put(value.f0, value.f1);
 				} else {
