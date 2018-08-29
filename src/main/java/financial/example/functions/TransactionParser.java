@@ -14,9 +14,9 @@ public class TransactionParser extends RichMapFunction<String, FinancialTransact
 		String[] splits = value.split(",");
 		
 		FinancialTransaction toReturn = new FinancialTransaction();
-		toReturn.setTransactionId(splits[0]);
+		toReturn.setTupleId(splits[0]);
 		toReturn.setDataSubject(splits[1]);
-		toReturn.setAmount(Double.parseDouble(splits[2]));
+		toReturn.setAmount(Integer.parseInt(splits[2]));
 		toReturn.setRecipient(splits[3]);
 		toReturn.setEventTime(Long.parseLong(splits[4]));
 		return toReturn;

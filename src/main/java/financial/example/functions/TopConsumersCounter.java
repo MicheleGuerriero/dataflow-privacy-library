@@ -21,7 +21,7 @@ public class TopConsumersCounter extends RichAllWindowFunction<TotalExpense, Top
 	public void apply(TimeWindow window, Iterable<TotalExpense> values, Collector<TopConsumersCount> out)
 			throws Exception {
 
-		Map<String, Double> totPerSubject = new HashMap<String, Double>();
+		Map<String, Integer> totPerSubject = new HashMap<String, Integer>();
 		
 		for(TotalExpense t: values) {
 			if(totPerSubject.containsKey(t.getDataSubject())) {
@@ -41,6 +41,7 @@ public class TopConsumersCounter extends RichAllWindowFunction<TotalExpense, Top
 		
 		TopConsumersCount nTopConsu = new TopConsumersCount();
 		
+		nTopConsu.setTupleId(TopConsumersCount.getNextTupleId());
 		nTopConsu.setCount(count);
 		nTopConsu.setEventTime(window.getEnd());
 

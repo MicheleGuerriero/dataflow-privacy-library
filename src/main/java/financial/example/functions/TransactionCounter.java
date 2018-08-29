@@ -24,6 +24,7 @@ public class TransactionCounter extends RichWindowFunction<FinancialTransaction,
 		
 		TransactionsCount toReturn = new TransactionsCount();
 		
+		toReturn.setTupleId(TransactionsCount.getNextTupleId());
 		toReturn.setDataSubject(key.getField(0));
 		toReturn.setnTransactions(count);
 		toReturn.setEventTime(window.getEnd());

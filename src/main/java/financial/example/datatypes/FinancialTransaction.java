@@ -1,12 +1,19 @@
 package financial.example.datatypes;
 
-public class FinancialTransaction {
+import java.io.Serializable;
 
-	private String transactionId;
+public class FinancialTransaction implements Serializable{
+
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 827026187961182328L;
+
+	private String tupleId;
 	
 	private String dataSubject;
 	
-	private Double amount;
+	private Integer amount;
 	
 	private String recipient;
 	
@@ -18,7 +25,7 @@ public class FinancialTransaction {
     	StringBuilder sb = new StringBuilder();
     	
         sb.append("@" + this.eventTime);
-        sb.append(" " + this.transactionId + ",");
+        sb.append(" " + this.tupleId + ",");
         sb.append(" " + this.dataSubject + ",");
         sb.append(" " + this.amount + ",");
         sb.append(" " + this.recipient + "");
@@ -37,12 +44,20 @@ public class FinancialTransaction {
 		
 	}
 	
-	public String getTransactionId() {
-		return transactionId;
+	public FinancialTransaction(String transactionId, String dataSubject, Integer amount, String recipient, Long eventTime) {
+		this.tupleId = transactionId;
+		this.dataSubject = dataSubject;
+		this.amount = amount;
+		this.recipient = recipient;
+		this.eventTime = eventTime;
+	}
+	
+	public String getTupleId() {
+		return tupleId;
 	}
 
-	public void setTransactionId(String transactionId) {
-		this.transactionId = transactionId;
+	public void setTupleId(String tupleId) {
+		this.tupleId = tupleId;
 	}
 
 	public String getDataSubject() {
@@ -53,11 +68,11 @@ public class FinancialTransaction {
 		this.dataSubject = dataSubject;
 	}
 
-	public Double getAmount() {
+	public Integer getAmount() {
 		return amount;
 	}
 
-	public void setAmount(Double amount) {
+	public void setAmount(Integer amount) {
 		this.amount = amount;
 	}
 

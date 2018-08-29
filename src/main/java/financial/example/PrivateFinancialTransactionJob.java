@@ -1,8 +1,11 @@
 package financial.example;
 
 import java.io.File;
+import java.util.ArrayList;
+import java.util.List;
 
 import org.apache.commons.io.FileUtils;
+import org.apache.flink.api.java.tuple.Tuple2;
 import org.apache.flink.core.fs.FileSystem.WriteMode;
 import org.apache.flink.streaming.api.TimeCharacteristic;
 import org.apache.flink.streaming.api.datastream.DataStream;
@@ -40,9 +43,51 @@ public class PrivateFinancialTransactionJob {
 		env.setStreamTimeCharacteristic(TimeCharacteristic.EventTime);
 		env.setBufferTimeout(0);
 
-		DataStream<String> input = env.socketTextStream("localhost", 9999);
+		/// privacy init
+		Yaml yaml = new Yaml();
 
-		DataStream<FinancialTransaction> s1 = input.map(new TransactionParser())
+		String content = FileUtils.readFileToString(
+				new File("/home/utente/eclipse-workspace/library/src/main/java/financial/example/privacy-config.yml"),
+				"UTF-8");
+
+		ApplicationPrivacy app = yaml.loadAs(content, ApplicationPrivacy.class);
+
+		DataStreamSource<PrivacyContext> contextStream = env
+				.addSource(new PrivacyContextFixedSource(0, 2000, "MarketConsult", "employee", "analytics"));
+
+		// end
+
+		// DataStream<String> input = env.socketTextStream("localhost", 9999);
+
+		/*
+		 * DataStream<FinancialTransaction> s1 = input.map(new TransactionParser())
+		 * .assignTimestampsAndWatermarks(new
+		 * AscendingTimestampExtractor<FinancialTransaction>() {
+		 * 
+		 * @Override public long extractAscendingTimestamp(FinancialTransaction element)
+		 * { return element.getEventTime(); } });
+		 */
+
+		List<Tuple2<FinancialTransaction, Long>> workload = new ArrayList<Tuple2<FinancialTransaction, Long>>();
+
+		workload.add(new Tuple2(new FinancialTransaction("t1", "Bob", 50, "Mary", 500L), 0L));
+		workload.add(new Tuple2(new FinancialTransaction("t2", "Mary", 100, "Paul", 1100L), 0L));
+		workload.add(new Tuple2(new FinancialTransaction("t3", "Bob", 100, "Paul", 3900L), 0L));
+		workload.add(new Tuple2(new FinancialTransaction("t4", "Paul", 200, "Mary", 6600L), 0L));
+		workload.add(new Tuple2(new FinancialTransaction("t5", "Bob", 150, "Mary", 8800L), 0L));
+		workload.add(new Tuple2(new FinancialTransaction("t6", "Mary", 50, "Paul", 10100L), 0L));
+		workload.add(new Tuple2(new FinancialTransaction("t7", "Paul", 70, "Bob", 15200L), 0L));
+		workload.add(new Tuple2(new FinancialTransaction("t8", "Bob", 100, "Mary", 19000L), 0L));
+		workload.add(new Tuple2(new FinancialTransaction("t9", "Mary", 500, "Paul", 23700L), 0L));
+		workload.add(new Tuple2(new FinancialTransaction("t10", "Bob", 130, "Mary", 27000L), 0L));
+		workload.add(new Tuple2(new FinancialTransaction("t11", "Paul", 300, "Bob", 29500L), 0L));
+		workload.add(new Tuple2(new FinancialTransaction("t12", "Mary", 150, "Bob", 32000L), 0L));
+		workload.add(new Tuple2(new FinancialTransaction("t13", "Bob", 70, "Paul", 36000L), 0L));
+		workload.add(new Tuple2(new FinancialTransaction("t14", "Mary", 230, "Paul", 39000L), 0L));
+		workload.add(new Tuple2(new FinancialTransaction("t15", "Bob", 550, "Paul", 43000L), 0L));
+
+		// begin s1
+		DataStream<FinancialTransaction> s1 = env.addSource(new FinancialTransactionFixedSource(1000, 0, workload))
 				.assignTimestampsAndWatermarks(new AscendingTimestampExtractor<FinancialTransaction>() {
 
 					@Override
@@ -51,38 +96,50 @@ public class PrivateFinancialTransactionJob {
 					}
 				});
 
+		// s1 privacy conf
+		app.getStreamByID("s1").setConcreteStream(s1);
+		//
+		// end s1
+
+		// begin s2
 		DataStream<TransactionsCount> s2 = s1.keyBy("dataSubject").timeWindow(Time.seconds(10))
 				.apply(new TransactionCounter());
+		app.getStreamByID("s2").setConcreteStream(s2);
+		// end s2
 
+		// begin s3
 		DataStream<TotalExpense> s3 = s1.keyBy("dataSubject").timeWindow(Time.seconds(10))
 				.apply(new TotalExpenseCalculator());
-
-		DataStream<TopConsumersCount> s4 = s3.timeWindowAll(Time.minutes(1)).apply(new TopConsumersCounter());
-		
-		/// privacy init
-		Yaml yaml = new Yaml();
-
-		String content = FileUtils.readFileToString(
-				new File("/home/utente/eclipse-workspace/library/src/main/java/financial/example/privacy-config.yml"), "UTF-8");
-
-		ApplicationPrivacy app = yaml.loadAs(content, ApplicationPrivacy.class);
-		
-		DataStreamSource<PrivacyContext> contextStream = env.addSource(new PrivacyContextFixedSource(0, 2000, "MarketConsult", "employee", "analytics"));
-
-		app.getStreamByID("s1").setConcreteStream(s1);
-		app.getStreamByID("s2").setConcreteStream(s2);
 		app.getStreamByID("s3").setConcreteStream(s3);
-		app.getStreamByID("s4").setConcreteStream(s4);
-		// end
+		// end s3
 
-		s2.writeAsText("/home/utente/eclipse-workspace/library/results/s2.txt", WriteMode.OVERWRITE);
+		///////////////////////////////////////////////////////////////////////////////////////////////////////
+		///////////////////////////////////////////////////////////////////////////////////////////////////////
 
-		
-		//protecting s3 before writing to sink
+		// s2 privacy conf
+
+		ApplicationDataStream app_s2 = app.getStreamByID("s2");
+
+		ProtectedStream<TransactionsCount> s2_p = new ProtectedStream<TransactionsCount>(false, "", -1, 1, false, 0);
+		s2_p.setStreamToProtect((DataStream<TransactionsCount>) app_s2.getConcreteStream());
+
+		for (VCP vcp : app.getVCPs(app_s2.getId())) {
+			s2_p.addVCP(app_s2, (VCP) vcp, app);
+		}
+
+		for (DSEP dsep : app.getDSEPs(app_s2.getId())) {
+			s2_p.addDSEP(app_s2, (DSEP) dsep, app);
+		}
+
+		DataStream<TransactionsCount> s2_f = s2_p.finalize(env, contextStream);
+		s2_f.writeAsText("/home/utente/eclipse-workspace/library/results/s2.txt", WriteMode.OVERWRITE)
+				.setParallelism(1);
+		// end s2 privacy conf
+
+		// s3 privacy conf
 		ApplicationDataStream app_s3 = app.getStreamByID("s3");
 
-		ProtectedStream<TotalExpense> s3_p = new ProtectedStream<TotalExpense>(false, "",
-				-1, 1, false, 0);
+		ProtectedStream<TotalExpense> s3_p = new ProtectedStream<TotalExpense>(false, "", -1, 1, false, 0);
 		s3_p.setStreamToProtect((DataStream<TotalExpense>) app_s3.getConcreteStream());
 
 		s3_p.addGeneralizationFunction("totalAmount", new Integer(1), new GeneralizationFunction());
@@ -94,26 +151,17 @@ public class PrivateFinancialTransactionJob {
 		for (DSEP dsep : app.getDSEPs(app_s3.getId())) {
 			s3_p.addDSEP(app_s3, (DSEP) dsep, app);
 		}
-		s3_p.finalize(env, contextStream).writeAsText("/home/utente/eclipse-workspace/library/results/s3.txt", WriteMode.OVERWRITE)
+		DataStream<TotalExpense> s3_f = s3_p.finalize(env, contextStream);
+		s3_f.writeAsText("/home/utente/eclipse-workspace/library/results/s3.txt", WriteMode.OVERWRITE)
 				.setParallelism(1);
-		// end
-		
-		
-		//protecting s4 before writing to sink
-		ApplicationDataStream app_s4 = app.getStreamByID("s4");
+		// end s3 privacy conf
 
-		ProtectedStream<TopConsumersCount> s4_p = new ProtectedStream<TopConsumersCount>(false, "",
-				-1, 1, false, 0);
-		s4_p.setStreamToProtect((DataStream<TopConsumersCount>) app_s4.getConcreteStream());
+		// begin s4
+		DataStream<TopConsumersCount> s4 = s3_f.timeWindowAll(Time.minutes(1)).apply(new TopConsumersCounter());
+		app.getStreamByID("s4").setConcreteStream(s4);
+		s4.writeAsText("/home/utente/eclipse-workspace/library/results/s4.txt", WriteMode.OVERWRITE).setParallelism(1);
+		// end s4
 
-		for (DSEP dsep : app.getDSEPs(app_s4.getId())) {
-			s4_p.addDSEP(app_s4, (DSEP) dsep, app);
-		}
-		s4_p.finalize(env, contextStream).writeAsText("/home/utente/eclipse-workspace/library/results/s4.txt", WriteMode.OVERWRITE)
-				.setParallelism(1);
-		// end
-		
-		
 		env.execute();
 
 	}

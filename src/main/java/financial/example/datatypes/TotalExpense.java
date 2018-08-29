@@ -1,10 +1,35 @@
 package financial.example.datatypes;
 
-public class TotalExpense {
+import java.io.Serializable;
+
+public class TotalExpense implements Serializable{
 	
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = -8425734499727611515L;
+	
+	private String tupleId;
+	
+	private static Integer tupleSeqNumber = 1;
+	
+	public static String getNextTupleId() {
+		tupleSeqNumber = tupleSeqNumber + 1;
+		return "t" + (tupleSeqNumber -1) ;
+	}
+	
+
+	public String getTupleId() {
+		return tupleId;
+	}
+
+	public void setTupleId(String tupleId) {
+		this.tupleId = tupleId;
+	}
+
 	private String dataSubject;
 	
-	private Double totalAmount;
+	private Integer totalAmount;
 	
 	private Long eventTime;
 
@@ -40,11 +65,11 @@ public class TotalExpense {
 		this.dataSubject = dataSubject;
 	}
 
-	public Double getTotalAmount() {
+	public Integer getTotalAmount() {
 		return totalAmount;
 	}
 
-	public void setTotalAmount(Double totalAmount) {
+	public void setTotalAmount(Integer totalAmount) {
 		this.totalAmount = totalAmount;
 	}
 	

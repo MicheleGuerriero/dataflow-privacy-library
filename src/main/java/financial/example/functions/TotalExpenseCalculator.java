@@ -17,7 +17,7 @@ public class TotalExpenseCalculator extends RichWindowFunction<FinancialTransact
 	@Override
 	public void apply(Tuple key, TimeWindow window, Iterable<FinancialTransaction> input, Collector<TotalExpense> out)
 			throws Exception {
-		Double tot = 0.0;
+		Integer tot = 0;
 		
 		for(FinancialTransaction t: input) {
 			tot = tot + t.getAmount();
@@ -25,6 +25,7 @@ public class TotalExpenseCalculator extends RichWindowFunction<FinancialTransact
 		
 		TotalExpense toReturn = new TotalExpense();
 		
+		toReturn.setTupleId(TotalExpense.getNextTupleId());
 		toReturn.setDataSubject(key.getField(0));
 		toReturn.setTotalAmount(tot);
 		toReturn.setEventTime(window.getEnd());

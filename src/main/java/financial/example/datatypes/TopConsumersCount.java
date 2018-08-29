@@ -1,12 +1,39 @@
 package financial.example.datatypes;
 
-public class TopConsumersCount {
+import java.io.Serializable;
+
+public class TopConsumersCount implements Serializable{
 	
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = -3463443786198544413L;
+
 	private Integer count;
 	
 	private Long eventTime;
 	
-    @Override
+	private String tupleId;
+	
+	private static Integer tupleSeqNumber = 1;
+	
+	public static String getNextTupleId() {
+		tupleSeqNumber = tupleSeqNumber + 1;
+		return "t" + (tupleSeqNumber -1) ;
+	}
+	
+	
+    public String getTupleId() {
+		return tupleId;
+	}
+
+
+	public void setTupleId(String tupleId) {
+		this.tupleId = tupleId;
+	}
+
+
+	@Override
     public String toString() {
     	
     	StringBuilder sb = new StringBuilder();

@@ -500,15 +500,21 @@ public class SubjectSpecificConditionChecker<T, S> extends
 	private void initializeWindow(String ds, T tuple, PastCondition cond)
 			throws NoSuchFieldException, SecurityException, IllegalArgumentException, IllegalAccessException {
 
-		Field e = tuple.getClass().getDeclaredField("eventTime");
-		e.setAccessible(true);
+		Field e1 = tuple.getClass().getDeclaredField("eventTime");
+		e1.setAccessible(true);
 
-		// create a new entry inwindowPerTuple and populate the list with the current
+		Field e2 = null;
+
+		// create a new entry in windowPerTuple and populate the list with the current
 		// content
 		List<Tuple2<String, S>> initWindow = new ArrayList<Tuple2<String, S>>();
 		for (Tuple2<String, S> t : retainedOtherStreamWindow) {
+			if (e2 == null) {
+				e2 = t.f1.getClass().getDeclaredField("eventTime");
+				e2.setAccessible(true);
+			}
 			if (t.f0.equals(ds)) {
-				if ((Long) e.get(t.f1) > (Long) e.get(tuple) - cond.timeWindowMilliseconds()) {
+				if ((Long) e2.get(t.f1) > (Long) e1.get(tuple) - cond.timeWindowMilliseconds()) {
 					initWindow.add(t);
 				}
 			}
@@ -525,8 +531,13 @@ public class SubjectSpecificConditionChecker<T, S> extends
 		java.util.Iterator<Tuple2<String, S>> iter = this.retainedOtherStreamWindow.iterator();
 		while (iter.hasNext()) {
 			Tuple2<String, S> rt = iter.next();
-			if (rt.f0.equals(ds)) {
-				if ((Long) e.get(rt.f1) < (Long) e.get(this.lastValuePerSubject.get(ds)) - pc.getUpperTemporalBound()) {
+			if (e2 == null) {
+				e2 = rt.f1.getClass().getDeclaredField("eventTime");
+				e2.setAccessible(true);
+			}
+			if (rt.f0.equals(ds) && this.lastValuePerSubject.get(ds) != null) {
+				if ((Long) e2.get(rt.f1) < (Long) e2.get(this.lastValuePerSubject.get(ds))
+						- pc.getUpperTemporalBound()) {
 					iter.remove();
 				}
 			}

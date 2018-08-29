@@ -218,10 +218,10 @@ public class PolicyActuator<T> extends RichCoFlatMapFunction<Tuple3<String, T, L
 				}
 			}
 		} else {
-			Field tId = value.f1.getClass().getDeclaredField("tupleId");
-			tId.setAccessible(true);
 			out.collect(value.f1);
 			if (this.monitoringActive) {
+				Field tId = value.f1.getClass().getDeclaredField("tupleId");
+				tId.setAccessible(true);
 				PrintStream socketWriter = new PrintStream(socket.getOutputStream());
 				socketWriter.println(tId.get(value.f1) + "_end");
 			}
