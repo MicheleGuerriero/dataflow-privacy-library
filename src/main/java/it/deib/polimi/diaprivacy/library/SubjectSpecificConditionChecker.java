@@ -682,7 +682,7 @@ public class SubjectSpecificConditionChecker<T, S> extends
 			for (T tuple : tupleMetadata.keySet()) {
 				List<Tuple2<String, S>> updatedList = tupleMetadata.get(tuple).f1;
 
-				Field ds = value.f1.getClass().getDeclaredField("dataSubject");
+				Field ds = tuple.getClass().getDeclaredField("dataSubject");
 				ds.setAccessible(true);
 
 				if (value.f0.equals(ds.get(tuple))) {
