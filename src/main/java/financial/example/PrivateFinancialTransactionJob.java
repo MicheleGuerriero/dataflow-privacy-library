@@ -1,6 +1,7 @@
 package financial.example;
 
 import java.io.File;
+import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -77,7 +78,7 @@ public class PrivateFinancialTransactionJob {
 		workload.add(new Tuple2(new FinancialTransaction("t5", "Bob", 150, "Mary", 8800L), 0L));
 		workload.add(new Tuple2(new FinancialTransaction("t6", "Mary", 50, "Paul", 10100L), 0L));
 		workload.add(new Tuple2(new FinancialTransaction("t7", "Paul", 70, "Bob", 15200L), 0L));
-		workload.add(new Tuple2(new FinancialTransaction("t8", "Bob", 100, "Mary", 19000L), 0L));
+		workload.add(new Tuple2(new FinancialTransaction("t8", "Bob", 120, "Mary", 19000L), 0L));
 		workload.add(new Tuple2(new FinancialTransaction("t9", "Mary", 500, "Paul", 23700L), 0L));
 		workload.add(new Tuple2(new FinancialTransaction("t10", "Bob", 130, "Mary", 27000L), 0L));
 		workload.add(new Tuple2(new FinancialTransaction("t11", "Paul", 300, "Bob", 29500L), 0L));
@@ -162,6 +163,11 @@ public class PrivateFinancialTransactionJob {
 		s4.writeAsText("/home/utente/eclipse-workspace/library/results/s4.txt", WriteMode.OVERWRITE).setParallelism(1);
 		// end s4
 
+		try (PrintWriter out = new PrintWriter("/home/utente/eclipse-workspace/library/results/plan.json")) {
+			out.println(env.getExecutionPlan());
+			out.close();
+		}
+		
 		env.execute();
 
 	}

@@ -87,8 +87,8 @@ public class ProtectedStream<T> {
 		Map<DataStream<?>, PastCondition> subjectSpecificPastConditions = vcp.getSubjectSpecificPastConditions(app);
 		Map<DataStream<?>, PastCondition> genericPastConditions = vcp.getGenericPastConditions(app);
 		Map<DataStream<?>, ContextualCondition> subjectSpecificStaticConditions = vcp
-				.getSubjectSpecificStaticConditions(app);
-		Map<DataStream<?>, ContextualCondition> genericStaticConditions = vcp.getGenericStaticConditions(app);
+				.getSubjectSpecificStaticConditions(app, protectedStream);
+		Map<DataStream<?>, ContextualCondition> genericStaticConditions = vcp.getGenericStaticConditions(app, protectedStream);
 		List<ContextualCondition> protectedStreamConds = vcp.getProtectedStreamConds(app, protectedStream);
 
 		for (DataStream<?> conditionedStream : subjectSpecificStaticConditions.keySet()) {
