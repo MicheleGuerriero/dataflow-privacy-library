@@ -584,7 +584,10 @@ public class GenericConditionChecker<T, S>
 						+ value.f0);
 				value.f2.add(this.checkCondition(value.f1, this.conditionPerDataSubject.get(value.f0)));
 			}
-			out.collect(value);
+
+			if (this.processingInEventTime) {
+				out.collect(value);
+			}
 		}
 
 		if (this.otherResults.containsKey(value.f1)) {

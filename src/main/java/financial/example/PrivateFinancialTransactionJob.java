@@ -35,6 +35,7 @@ import it.deib.polimi.diaprivacy.model.VCP;
 
 public class PrivateFinancialTransactionJob {
 
+	@SuppressWarnings({ "unchecked", "rawtypes" })
 	public static void main(String[] args) throws Exception {
 
 		StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
@@ -71,21 +72,21 @@ public class PrivateFinancialTransactionJob {
 
 		List<Tuple2<FinancialTransaction, Long>> workload = new ArrayList<Tuple2<FinancialTransaction, Long>>();
 
-		workload.add(new Tuple2(new FinancialTransaction("t1", "Bob", 50, "Mary", 500L), 600L));
-		workload.add(new Tuple2(new FinancialTransaction("t2", "Mary", 100, "Paul", 1100L), 2800L));
-		workload.add(new Tuple2(new FinancialTransaction("t3", "Bob", 100, "Paul", 3900L), 2700L));
-		workload.add(new Tuple2(new FinancialTransaction("t4", "Paul", 200, "Mary", 6600L), 2200L));
-		workload.add(new Tuple2(new FinancialTransaction("t5", "Bob", 150, "Mary", 8800L), 1300L));
-		workload.add(new Tuple2(new FinancialTransaction("t6", "Mary", 50, "Paul", 10100L), 5100L));
-		workload.add(new Tuple2(new FinancialTransaction("t7", "Paul", 70, "Bob", 15200L), 3800L));
-		workload.add(new Tuple2(new FinancialTransaction("t8", "Bob", 120, "Mary", 19000L), 4700L));
-		workload.add(new Tuple2(new FinancialTransaction("t9", "Mary", 500, "Paul", 23700L), 3300L));
-		workload.add(new Tuple2(new FinancialTransaction("t10", "Bob", 130, "Mary", 27000L), 2500L));
-		workload.add(new Tuple2(new FinancialTransaction("t11", "Paul", 300, "Bob", 29500L), 2500L));
-		workload.add(new Tuple2(new FinancialTransaction("t12", "Mary", 150, "Bob", 32000L), 4000L));
-		workload.add(new Tuple2(new FinancialTransaction("t13", "Bob", 70, "Paul", 36000L), 3000L));
-		workload.add(new Tuple2(new FinancialTransaction("t14", "Mary", 230, "Paul", 39000L), 4000L));
-		workload.add(new Tuple2(new FinancialTransaction("t15", "Bob", 550, "Paul", 43000L), 0L));
+		workload.add(new Tuple2(new FinancialTransaction("t1", "Bob", 50, "Mary", 1000500L), 600L));
+		workload.add(new Tuple2(new FinancialTransaction("t2", "Mary", 100, "Paul", 1001100L), 2800L));
+		workload.add(new Tuple2(new FinancialTransaction("t3", "Bob", 100, "Paul", 1003900L), 2700L));
+		workload.add(new Tuple2(new FinancialTransaction("t4", "Paul", 200, "Mary", 1006600L), 2200L));
+		workload.add(new Tuple2(new FinancialTransaction("t5", "Bob", 150, "Mary", 1008800L), 1300L));
+		workload.add(new Tuple2(new FinancialTransaction("t6", "Mary", 50, "Paul", 1010100L), 5100L));
+		workload.add(new Tuple2(new FinancialTransaction("t7", "Paul", 70, "Bob", 1015200L), 3800L));
+		workload.add(new Tuple2(new FinancialTransaction("t8", "Bob", 120, "Mary", 1019000L), 4700L));
+		workload.add(new Tuple2(new FinancialTransaction("t9", "Mary", 500, "Paul", 1023700L), 3300L));
+		workload.add(new Tuple2(new FinancialTransaction("t10", "Bob", 130, "Mary", 1027000L), 2500L));
+		workload.add(new Tuple2(new FinancialTransaction("t11", "Paul", 300, "Bob", 1029500L), 2500L));
+		workload.add(new Tuple2(new FinancialTransaction("t12", "Mary", 150, "Bob", 1032000L), 4000L));
+		workload.add(new Tuple2(new FinancialTransaction("t13", "Bob", 70, "Paul", 1036000L), 3000L));
+		workload.add(new Tuple2(new FinancialTransaction("t14", "Mary", 230, "Paul", 1039000L), 4000L));
+		workload.add(new Tuple2(new FinancialTransaction("t15", "Bob", 550, "Paul", 1043000L), 0L));
 
 		// begin s1
 		DataStream<FinancialTransaction> s1 = env.addSource(new FinancialTransactionFixedSource(1000, 0, workload))
@@ -121,7 +122,7 @@ public class PrivateFinancialTransactionJob {
 
 		ApplicationDataStream app_s2 = app.getStreamByID("s2");
 
-		ProtectedStream<TransactionsCount> s2_p = new ProtectedStream<TransactionsCount>(false, "", -1, 1, true, 1);
+		ProtectedStream<TransactionsCount> s2_p = new ProtectedStream<TransactionsCount>(false, "", -1, 1, false, 0);
 		s2_p.setStreamToProtect((DataStream<TransactionsCount>) app_s2.getConcreteStream());
 
 		for (VCP vcp : app.getVCPs(app_s2.getId())) {
@@ -140,7 +141,7 @@ public class PrivateFinancialTransactionJob {
 		// s3 privacy conf
 		ApplicationDataStream app_s3 = app.getStreamByID("s3");
 
-		ProtectedStream<TotalExpense> s3_p = new ProtectedStream<TotalExpense>(false, "", -1, 1, true, 1);
+		ProtectedStream<TotalExpense> s3_p = new ProtectedStream<TotalExpense>(false, "", -1, 1, false, 0);
 		s3_p.setStreamToProtect((DataStream<TotalExpense>) app_s3.getConcreteStream());
 
 		s3_p.addGeneralizationFunction("totalAmount", new Integer(1), new GeneralizationFunction());
