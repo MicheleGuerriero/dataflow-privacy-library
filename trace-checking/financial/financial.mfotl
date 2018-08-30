@@ -1,0 +1,8 @@
+s3('Bob',c1, c1org) AND c1org > 100 AND NOT c1=-1 
+IMPLIES NOT (
+
+(ONCE[0,*] context('MarketConsult')) AND
+(NOT EXISTS cx1. (context(cx1) AND NOT cx1='MarketConsult') SINCE[0,*] context('MarketConsult')) AND
+
+(ONCE[0,3000] s2('Bob',c2) AND c2 >= 3)
+)

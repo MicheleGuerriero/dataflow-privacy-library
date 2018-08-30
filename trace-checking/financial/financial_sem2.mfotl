@@ -1,0 +1,8 @@
+s1('ds1',c1, c1org) IMPLIES
+(
+(
+c1org > 130 AND
+(ONCE[0,*] context('u1')) AND
+(NOT EXISTS cx1. (context(cx1) AND NOT cx1='u1') SINCE[0,*] context('u1')) AND
+(NOT s2('ds1', _) SINCE(s2('ds1', _) AND ONCE[0,300] s2('ds1',c2) AND c2 > 130)))
+IMPLIES c1=-1)

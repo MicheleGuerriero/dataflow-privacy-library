@@ -58,21 +58,26 @@ public class PrivateFinancialTransactionJob {
 		DataStreamSource<PrivacyContext> contextStream = env
 				.addSource(new PrivacyContextFixedSource(0, 2000, "MarketConsult", "employee", "analytics"));
 
-		// end
-
-		// DataStream<String> input = env.socketTextStream("localhost", 9999);
-
-		/*
-		 * DataStream<FinancialTransaction> s1 = input.map(new TransactionParser())
-		 * .assignTimestampsAndWatermarks(new
-		 * AscendingTimestampExtractor<FinancialTransaction>() {
-		 * 
-		 * @Override public long extractAscendingTimestamp(FinancialTransaction element)
-		 * { return element.getEventTime(); } });
-		 */
-
 		List<Tuple2<FinancialTransaction, Long>> workload = new ArrayList<Tuple2<FinancialTransaction, Long>>();
 
+		
+		workload.add(new Tuple2(new FinancialTransaction("t1", "Bob", 50, "Mary", 100050L), 60L));
+		workload.add(new Tuple2(new FinancialTransaction("t2", "Mary", 100, "Paul", 100110L), 280L));
+		workload.add(new Tuple2(new FinancialTransaction("t3", "Bob", 100, "Paul", 100390L), 270L));
+		workload.add(new Tuple2(new FinancialTransaction("t4", "Paul", 200, "Mary", 100660L), 220L));
+		workload.add(new Tuple2(new FinancialTransaction("t5", "Bob", 150, "Mary", 100880L), 130L));
+		workload.add(new Tuple2(new FinancialTransaction("t6", "Mary", 50, "Paul", 101010L), 510L));
+		workload.add(new Tuple2(new FinancialTransaction("t7", "Paul", 70, "Bob", 101520L), 380L));
+		workload.add(new Tuple2(new FinancialTransaction("t8", "Bob", 120, "Mary", 101900L), 470L));
+		workload.add(new Tuple2(new FinancialTransaction("t9", "Mary", 500, "Paul", 102370L), 330L));
+		workload.add(new Tuple2(new FinancialTransaction("t10", "Bob", 130, "Mary", 102700L), 250L));
+		workload.add(new Tuple2(new FinancialTransaction("t11", "Paul", 300, "Bob", 102950L), 250L));
+		workload.add(new Tuple2(new FinancialTransaction("t12", "Mary", 150, "Bob", 103200L), 400L));
+		workload.add(new Tuple2(new FinancialTransaction("t13", "Bob", 70, "Paul", 103600L), 300L));
+		workload.add(new Tuple2(new FinancialTransaction("t14", "Mary", 230, "Paul", 103900L), 4000L));
+		workload.add(new Tuple2(new FinancialTransaction("t15", "Bob", 550, "Paul", 104300L), 0L));
+		
+		// wrong workload in processing time
 		workload.add(new Tuple2(new FinancialTransaction("t1", "Bob", 50, "Mary", 100050L), 60L));
 		workload.add(new Tuple2(new FinancialTransaction("t2", "Mary", 100, "Paul", 100110L), 280L));
 		workload.add(new Tuple2(new FinancialTransaction("t3", "Bob", 100, "Paul", 100390L), 270L));
@@ -123,7 +128,7 @@ public class PrivateFinancialTransactionJob {
 
 		ApplicationDataStream app_s2 = app.getStreamByID("s2");
 
-		ProtectedStream<TransactionsCount> s2_p = new ProtectedStream<TransactionsCount>(false, "", -1, 1, false, 0);
+		ProtectedStream<TransactionsCount> s2_p = new ProtectedStream<TransactionsCount>(false, "", -1, 1, true, 6000);
 		s2_p.setStreamToProtect((DataStream<TransactionsCount>) app_s2.getConcreteStream());
 
 		for (VCP vcp : app.getVCPs(app_s2.getId())) {
@@ -142,7 +147,7 @@ public class PrivateFinancialTransactionJob {
 		// s3 privacy conf
 		ApplicationDataStream app_s3 = app.getStreamByID("s3");
 
-		ProtectedStream<TotalExpense> s3_p = new ProtectedStream<TotalExpense>(false, "", -1, 1, false, 0);
+		ProtectedStream<TotalExpense> s3_p = new ProtectedStream<TotalExpense>(false, "", -1, 1, true, 6000);
 		s3_p.setStreamToProtect((DataStream<TotalExpense>) app_s3.getConcreteStream());
 
 		s3_p.addGeneralizationFunction("totalAmount", new Integer(1), new GeneralizationFunction());
@@ -167,7 +172,7 @@ public class PrivateFinancialTransactionJob {
 		
 		s1.writeAsText("/home/utente/eclipse-workspace/library/results/s1.txt", WriteMode.OVERWRITE).setParallelism(1);
 
-		contextStream.writeAsText("/home/utente/eclipse-workspace/library/results/ctx.txt").setParallelism(1);
+		contextStream.writeAsText("/home/utente/eclipse-workspace/library/results/ctx.txt", WriteMode.OVERWRITE).setParallelism(1);
 		
 		try (PrintWriter out = new PrintWriter("/home/utente/eclipse-workspace/library/results/plan.json")) {
 			out.println(env.getExecutionPlan());

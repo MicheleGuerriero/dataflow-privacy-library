@@ -29,6 +29,8 @@ public class TransactionCounter extends RichWindowFunction<FinancialTransaction,
 		toReturn.setnTransactions(count);
 		toReturn.setEventTime(window.getEnd());
 
+		Thread.sleep(5000);
+		
 		out.collect(toReturn);
 	}
 
