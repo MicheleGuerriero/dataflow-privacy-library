@@ -7,6 +7,7 @@ import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 import org.apache.flink.streaming.api.functions.timestamps.AscendingTimestampExtractor;
 import org.apache.flink.streaming.api.windowing.time.Time;
 
+import example1.utils.StreamMerger;
 import financial.example.datatypes.FinancialTransaction;
 import financial.example.datatypes.TopConsumersCount;
 import financial.example.datatypes.TotalExpense;
@@ -84,6 +85,7 @@ public class FinancialTransactionJob {
 		s4.writeAsText("/home/utente/eclipse-workspace/library/results/s4.txt", WriteMode.OVERWRITE);
 
 		env.execute();
+
 
 	}
 

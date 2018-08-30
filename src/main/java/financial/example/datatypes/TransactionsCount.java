@@ -2,7 +2,7 @@ package financial.example.datatypes;
 
 import java.io.Serializable;
 
-public class TransactionsCount implements Serializable{
+public class TransactionsCount implements Serializable {
 
 	/**
 	 * 
@@ -10,21 +10,23 @@ public class TransactionsCount implements Serializable{
 	private static final long serialVersionUID = -1212875353556512315L;
 
 	private String dataSubject;
-		
+
 	private Integer nTransactions;
-	
+
 	private Long eventTime;
-	
+
 	private String tupleId;
-	
+
 	private static Integer tupleSeqNumber = 1;
-	
+
+	private static final String streamId = "s2";
+
 	public static String getNextTupleId() {
 		tupleSeqNumber = tupleSeqNumber + 1;
-		return "t" + (tupleSeqNumber -1) ;
+		return "t" + (tupleSeqNumber - 1);
 	}
-	
-    public String getTupleId() {
+
+	public String getTupleId() {
 		return tupleId;
 	}
 
@@ -33,17 +35,19 @@ public class TransactionsCount implements Serializable{
 	}
 
 	@Override
-    public String toString() {
-    	
-    	StringBuilder sb = new StringBuilder();
-    	
-        sb.append("@" + this.eventTime);
-        sb.append(" " + this.dataSubject + ",");
-        sb.append(" " + this.nTransactions);
-        
-        return sb.toString();
-    }
-	
+	public String toString() {
+
+		StringBuilder sb = new StringBuilder();
+
+		sb.append("@" + this.eventTime);
+		sb.append(" " + this.streamId + " (");
+		sb.append(this.dataSubject).append(",");
+		sb.append(this.nTransactions);
+		sb.append(")");
+
+		return sb.toString();
+	}
+
 	public Long getEventTime() {
 		return eventTime;
 	}
@@ -69,7 +73,7 @@ public class TransactionsCount implements Serializable{
 	}
 
 	public TransactionsCount() {
-		
+
 	}
-	
+
 }

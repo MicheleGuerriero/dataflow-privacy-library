@@ -19,18 +19,22 @@ public class FinancialTransaction implements Serializable{
 	
 	private Long eventTime;
 	
-    @Override
-    public String toString() {
-    	
-    	StringBuilder sb = new StringBuilder();
-    	
-        sb.append("@" + this.eventTime);
-        sb.append(" " + this.tupleId + ",");
-        sb.append(" " + this.dataSubject + ",");
-        sb.append(" " + this.amount + ",");
-        sb.append(" " + this.recipient + "");
-        return sb.toString();
-    }
+    private static final String streamId = "s1";
+	
+	@Override
+	public String toString() {
+
+		StringBuilder sb = new StringBuilder();
+
+		sb.append("@" + this.eventTime);
+		sb.append(" " + this.streamId + " (");
+		sb.append(this.dataSubject).append(",");
+		sb.append(this.amount);
+		sb.append(this.recipient);
+		sb.append(")");
+
+		return sb.toString();
+	}
 	
 	public Long getEventTime() {
 		return eventTime;

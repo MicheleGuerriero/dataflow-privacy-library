@@ -17,11 +17,12 @@ public class TopConsumersCount implements Serializable{
 	
 	private static Integer tupleSeqNumber = 1;
 	
+    private static final String streamId = "s4";
+	
 	public static String getNextTupleId() {
 		tupleSeqNumber = tupleSeqNumber + 1;
 		return "t" + (tupleSeqNumber -1) ;
 	}
-	
 	
     public String getTupleId() {
 		return tupleId;
@@ -33,16 +34,18 @@ public class TopConsumersCount implements Serializable{
 	}
 
 
-	@Override
+    @Override
     public String toString() {
     	
     	StringBuilder sb = new StringBuilder();
     	
         sb.append("@" + this.eventTime);
-        sb.append(" " + this.count);
+        sb.append(" " + this.streamId+ " (");
+        sb.append(this.count).append(")");
+        
         return sb.toString();
     }
-	
+    
 	public Long getEventTime() {
 		return eventTime;
 	}

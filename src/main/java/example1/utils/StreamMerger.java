@@ -11,6 +11,7 @@ import java.io.PrintWriter;
 import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Collections;
 
@@ -51,6 +52,32 @@ public class StreamMerger {
 		merge(new File(experimentFolderPath + "/ctx.txt"), new File(experimentFolderPath + "/merged-tmp4.txt"),
 				new File(experimentFolderPath + "/merged.log"));
 
+	}
+	
+	public static void genericMerge(String experimentFolderPath, List<String> streamNames) {
+		
+		
+		int count = 0;
+		String previous = null;
+		
+		for(String s: streamNames) {
+			sortStream(new File(experimentFolderPath + "/" + s +".txt"), new File(experimentFolderPath + "/" + s + "_sorted.txt"));
+		}
+		
+		Iterator<String> iter = streamNames.iterator();
+		if(iter.hasNext()) {
+			previous = iter.next();
+			merge(new File(experimentFolderPath + "/" + previous + "_sorted.txt"), new File(experimentFolderPath + "/" + iter.next() + "_sorted.txt"),
+					new File(experimentFolderPath + "/merged-tmp" + count + ".log"));
+		} else {
+			throw new IllegalStateException("At least one stream should be provided.");
+		}
+		
+		while(iter.hasNext()) {
+			merge(new File(experimentFolderPath + "/merged-tmp" + count + ".log"), new File(experimentFolderPath + "/" + iter.next() + "_sorted.txt"),
+					new File(experimentFolderPath + "/merged-tmp" + (count + 1) + ".log"));
+			count = count + 1;
+		}
 	}
 
 	private static void sortStream(File input, File output) {

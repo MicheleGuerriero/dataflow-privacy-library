@@ -26,7 +26,7 @@ policiesPerStream:
       generalization: 
         totalAmount: 1
       pastConditions:
-      - {lowerTemporalBound: 0, operator: GREATER_OR_EQUAL, type: INTEGER, upperTemporalBound: 30000,
+      - {lowerTemporalBound: 0, operator: GREATER_OR_EQUAL, type: INTEGER, upperTemporalBound: 3000,
         value: 3, variable: nTransactions, containerStreamId: s2}
       privacyContext: {purpose: analytics, role: employee, timestamp: -1, userId: MarketConsult}
       segPolicy: It is always the case that if {user EQUAL MarketConsult} {role EQUAL employee} {purpose EQUAL analytics} {exists in stream s2 nTransaction GREATER than 3 between 0 and 30s from now} {last value of totalAmount in stream s3 GREATER than 100},  [have occurred] then {my data in s3 is not in clear} [holds].

@@ -13,6 +13,8 @@ public class TotalExpense implements Serializable{
 	
 	private static Integer tupleSeqNumber = 1;
 	
+    private static final String streamId = "s3";
+	
 	public static String getNextTupleId() {
 		tupleSeqNumber = tupleSeqNumber + 1;
 		return "t" + (tupleSeqNumber -1) ;
@@ -31,6 +33,17 @@ public class TotalExpense implements Serializable{
 	
 	private Integer totalAmount;
 	
+	private Integer totalAmountOrg;
+	
+	public Integer getTotalAmountOrg() {
+		return totalAmountOrg;
+	}
+
+
+	public void setTotalAmountOrg(Integer totalAmountOrg) {
+		this.totalAmountOrg = totalAmountOrg;
+	}
+
 	private Long eventTime;
 
     @Override
@@ -39,8 +52,15 @@ public class TotalExpense implements Serializable{
     	StringBuilder sb = new StringBuilder();
     	
         sb.append("@" + this.eventTime);
-        sb.append(" " + this.dataSubject + ",");
-        sb.append(" " + this.totalAmount);
+        sb.append(" " + this.streamId+ " (");
+        sb.append(this.dataSubject).append(",");
+        sb.append(this.totalAmount);
+
+        if (totalAmountOrg != null){
+          sb.append(",").append(totalAmountOrg).append(")");
+        } else {
+          sb.append(")");
+        }
         
         return sb.toString();
     }
@@ -70,7 +90,12 @@ public class TotalExpense implements Serializable{
 	}
 
 	public void setTotalAmount(Integer totalAmount) {
-		this.totalAmount = totalAmount;
+		if(this.totalAmount == null) {
+			this.totalAmount = totalAmount;
+			this.totalAmountOrg = totalAmount;
+		} else {
+			this.totalAmount = totalAmount;
+		}
 	}
 	
 }

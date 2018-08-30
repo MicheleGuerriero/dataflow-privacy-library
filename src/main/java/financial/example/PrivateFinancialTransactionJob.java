@@ -16,6 +16,7 @@ import org.apache.flink.streaming.api.functions.timestamps.AscendingTimestampExt
 import org.apache.flink.streaming.api.windowing.time.Time;
 import org.yaml.snakeyaml.Yaml;
 
+import example1.utils.StreamMerger;
 import financial.example.datatypes.FinancialTransaction;
 import financial.example.datatypes.TopConsumersCount;
 import financial.example.datatypes.TotalExpense;
@@ -72,21 +73,21 @@ public class PrivateFinancialTransactionJob {
 
 		List<Tuple2<FinancialTransaction, Long>> workload = new ArrayList<Tuple2<FinancialTransaction, Long>>();
 
-		workload.add(new Tuple2(new FinancialTransaction("t1", "Bob", 50, "Mary", 1000500L), 600L));
-		workload.add(new Tuple2(new FinancialTransaction("t2", "Mary", 100, "Paul", 1001100L), 2800L));
-		workload.add(new Tuple2(new FinancialTransaction("t3", "Bob", 100, "Paul", 1003900L), 2700L));
-		workload.add(new Tuple2(new FinancialTransaction("t4", "Paul", 200, "Mary", 1006600L), 2200L));
-		workload.add(new Tuple2(new FinancialTransaction("t5", "Bob", 150, "Mary", 1008800L), 1300L));
-		workload.add(new Tuple2(new FinancialTransaction("t6", "Mary", 50, "Paul", 1010100L), 5100L));
-		workload.add(new Tuple2(new FinancialTransaction("t7", "Paul", 70, "Bob", 1015200L), 3800L));
-		workload.add(new Tuple2(new FinancialTransaction("t8", "Bob", 120, "Mary", 1019000L), 4700L));
-		workload.add(new Tuple2(new FinancialTransaction("t9", "Mary", 500, "Paul", 1023700L), 3300L));
-		workload.add(new Tuple2(new FinancialTransaction("t10", "Bob", 130, "Mary", 1027000L), 2500L));
-		workload.add(new Tuple2(new FinancialTransaction("t11", "Paul", 300, "Bob", 1029500L), 2500L));
-		workload.add(new Tuple2(new FinancialTransaction("t12", "Mary", 150, "Bob", 1032000L), 4000L));
-		workload.add(new Tuple2(new FinancialTransaction("t13", "Bob", 70, "Paul", 1036000L), 3000L));
-		workload.add(new Tuple2(new FinancialTransaction("t14", "Mary", 230, "Paul", 1039000L), 4000L));
-		workload.add(new Tuple2(new FinancialTransaction("t15", "Bob", 550, "Paul", 1043000L), 0L));
+		workload.add(new Tuple2(new FinancialTransaction("t1", "Bob", 50, "Mary", 100050L), 60L));
+		workload.add(new Tuple2(new FinancialTransaction("t2", "Mary", 100, "Paul", 100110L), 280L));
+		workload.add(new Tuple2(new FinancialTransaction("t3", "Bob", 100, "Paul", 100390L), 270L));
+		workload.add(new Tuple2(new FinancialTransaction("t4", "Paul", 200, "Mary", 100660L), 220L));
+		workload.add(new Tuple2(new FinancialTransaction("t5", "Bob", 150, "Mary", 100880L), 130L));
+		workload.add(new Tuple2(new FinancialTransaction("t6", "Mary", 50, "Paul", 101010L), 510L));
+		workload.add(new Tuple2(new FinancialTransaction("t7", "Paul", 70, "Bob", 101520L), 380L));
+		workload.add(new Tuple2(new FinancialTransaction("t8", "Bob", 120, "Mary", 101900L), 470L));
+		workload.add(new Tuple2(new FinancialTransaction("t9", "Mary", 500, "Paul", 102370L), 330L));
+		workload.add(new Tuple2(new FinancialTransaction("t10", "Bob", 130, "Mary", 102700L), 250L));
+		workload.add(new Tuple2(new FinancialTransaction("t11", "Paul", 300, "Bob", 102950L), 250L));
+		workload.add(new Tuple2(new FinancialTransaction("t12", "Mary", 150, "Bob", 103200L), 400L));
+		workload.add(new Tuple2(new FinancialTransaction("t13", "Bob", 70, "Paul", 103600L), 300L));
+		workload.add(new Tuple2(new FinancialTransaction("t14", "Mary", 230, "Paul", 103900L), 4000L));
+		workload.add(new Tuple2(new FinancialTransaction("t15", "Bob", 550, "Paul", 104300L), 0L));
 
 		// begin s1
 		DataStream<FinancialTransaction> s1 = env.addSource(new FinancialTransactionFixedSource(1000, 0, workload))
@@ -104,13 +105,13 @@ public class PrivateFinancialTransactionJob {
 		// end s1
 
 		// begin s2
-		DataStream<TransactionsCount> s2 = s1.keyBy("dataSubject").timeWindow(Time.seconds(10))
+		DataStream<TransactionsCount> s2 = s1.keyBy("dataSubject").timeWindow(Time.seconds(1))
 				.apply(new TransactionCounter());
 		app.getStreamByID("s2").setConcreteStream(s2);
 		// end s2
 
 		// begin s3
-		DataStream<TotalExpense> s3 = s1.keyBy("dataSubject").timeWindow(Time.seconds(10))
+		DataStream<TotalExpense> s3 = s1.keyBy("dataSubject").timeWindow(Time.seconds(1))
 				.apply(new TotalExpenseCalculator());
 		app.getStreamByID("s3").setConcreteStream(s3);
 		// end s3
@@ -159,10 +160,12 @@ public class PrivateFinancialTransactionJob {
 		// end s3 privacy conf
 
 		// begin s4
-		DataStream<TopConsumersCount> s4 = s3_f.timeWindowAll(Time.minutes(1)).apply(new TopConsumersCounter());
+		DataStream<TopConsumersCount> s4 = s3_f.timeWindowAll(Time.seconds(6)).apply(new TopConsumersCounter());
 		app.getStreamByID("s4").setConcreteStream(s4);
 		s4.writeAsText("/home/utente/eclipse-workspace/library/results/s4.txt", WriteMode.OVERWRITE).setParallelism(1);
 		// end s4
+		
+		s1.writeAsText("/home/utente/eclipse-workspace/library/results/s1.txt", WriteMode.OVERWRITE).setParallelism(1);
 
 		try (PrintWriter out = new PrintWriter("/home/utente/eclipse-workspace/library/results/plan.json")) {
 			out.println(env.getExecutionPlan());
@@ -170,6 +173,8 @@ public class PrivateFinancialTransactionJob {
 		}
 		
 		env.execute();
+						
+		StreamMerger.genericMerge("/home/utente/eclipse-workspace/library/results",  app.getApplicationStreamsNames());
 
 	}
 
