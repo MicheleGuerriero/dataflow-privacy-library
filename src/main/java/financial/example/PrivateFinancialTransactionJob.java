@@ -167,14 +167,20 @@ public class PrivateFinancialTransactionJob {
 		
 		s1.writeAsText("/home/utente/eclipse-workspace/library/results/s1.txt", WriteMode.OVERWRITE).setParallelism(1);
 
+		contextStream.writeAsText("/home/utente/eclipse-workspace/library/results/ctx.txt").setParallelism(1);
+		
 		try (PrintWriter out = new PrintWriter("/home/utente/eclipse-workspace/library/results/plan.json")) {
 			out.println(env.getExecutionPlan());
 			out.close();
 		}
 		
+		
 		env.execute();
+		
+		List<String> streamNames = app.getApplicationStreamsNames();
+		streamNames.add("ctx");
 						
-		StreamMerger.genericMerge("/home/utente/eclipse-workspace/library/results",  app.getApplicationStreamsNames(), "/home/utente/eclipse-workspace/library/trace-checking/financial/financial.log");
+		StreamMerger.genericMerge("/home/utente/eclipse-workspace/library/results",  streamNames, "/home/utente/eclipse-workspace/library/trace-checking/financial/financial.log");
 
 	}
 

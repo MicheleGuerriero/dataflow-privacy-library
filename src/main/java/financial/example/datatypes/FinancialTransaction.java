@@ -29,7 +29,7 @@ public class FinancialTransaction implements Serializable{
 		sb.append("@" + this.eventTime);
 		sb.append(" " + this.streamId + " (");
 		sb.append(this.dataSubject).append(",");
-		sb.append(this.amount);
+		sb.append(this.amount).append(",");
 		sb.append(this.recipient);
 		sb.append(")");
 
