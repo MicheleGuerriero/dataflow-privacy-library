@@ -54,7 +54,7 @@ public class StreamMerger {
 
 	}
 	
-	public static void genericMerge(String experimentFolderPath, List<String> streamNames) {
+	public static void genericMerge(String experimentFolderPath, List<String> streamNames, String output) {
 		
 		
 		int count = 0;
@@ -74,9 +74,15 @@ public class StreamMerger {
 		}
 		
 		while(iter.hasNext()) {
-			merge(new File(experimentFolderPath + "/merged-tmp" + count + ".log"), new File(experimentFolderPath + "/" + iter.next() + "_sorted.txt"),
+			String current = iter.next();
+			if(iter.hasNext()) {
+			merge(new File(experimentFolderPath + "/merged-tmp" + count + ".log"), new File(experimentFolderPath + "/" + current + "_sorted.txt"),
 					new File(experimentFolderPath + "/merged-tmp" + (count + 1) + ".log"));
 			count = count + 1;
+			} else {
+				merge(new File(experimentFolderPath + "/merged-tmp" + count + ".log"), new File(experimentFolderPath + "/" + current + "_sorted.txt"),
+						new File(output));
+			}
 		}
 	}
 

@@ -174,7 +174,7 @@ public class PrivateFinancialTransactionJob {
 		
 		env.execute();
 						
-		StreamMerger.genericMerge("/home/utente/eclipse-workspace/library/results",  app.getApplicationStreamsNames());
+		StreamMerger.genericMerge("/home/utente/eclipse-workspace/library/results",  app.getApplicationStreamsNames(), "/home/utente/eclipse-workspace/library/trace-checking/financial/financial.log");
 
 	}
 
