@@ -1,0 +1,90 @@
+!!it.deib.polimi.diaprivacy.model.ApplicationPrivacy
+policiesPerStream:
+  ? concreteStream: null
+    fields:
+    - {name: content}
+    id: s1
+    isSubjectSpecific: true
+    sourceId: null
+  : - !!it.deib.polimi.diaprivacy.model.VCP
+      dataSubject: ds1
+      generalization: 
+        content: 1
+      pastConditions:
+      - {lowerTemporalBound: 0, operator: GREATER, type: INTEGER, upperTemporalBound: 300,
+        value: 130, variable: content, containerStreamId: s2}
+      - {lowerTemporalBound: 0, operator: GREATER, type: INTEGER, upperTemporalBound: 300,
+        value: 130, variable: content, containerStreamId: s4}
+      privacyContext: {purpose: marketing, role: employee, timestamp: -1, userId: u1}
+      segPolicy: It is always the case that if {user EQUAL u1} {role EQUAL employee} {purpose EQUAL marketing} {s2 GREATER 130 between 0 and 300 from now} {s3 GREATER 130}, {s4 GREATER 130 between 0 and 300 from now} {s5 GREATER 130},  [have occurred] then {my data in s1 is not in clear} [holds].
+      simpleConditions:
+      - {operator: GREATER, type: INTEGER, value: 130, variable: content, containerStreamId: s3}
+      - {operator: GREATER, type: INTEGER, value: 130, variable: content, containerStreamId: s5}
+    - !!it.deib.polimi.diaprivacy.model.VCP
+      dataSubject: ds2
+      generalization: 
+        content: 1
+      pastConditions:
+      - {lowerTemporalBound: 0, operator: GREATER, type: INTEGER, upperTemporalBound: 500,
+        value: 100, variable: content, containerStreamId: s4}
+      privacyContext: {purpose: marketing, role: employee, timestamp: -1, userId: u1}
+      segPolicy: It is always the case that if {user EQUAL u1} {role EQUAL employee} {purpose EQUAL marketing} , {s4 GREATER 100 between 0 and 500 from now} {s5 LESS 120},  [have occurred] then {my data in s1 is not in clear} [holds].
+      simpleConditions:
+      - {operator: LESS, type: INTEGER, value: 120, variable: content, containerStreamId: s5}
+  ? concreteStream: null
+    fields:
+    - {name: content}
+    id: s2
+    isSubjectSpecific: true
+    sourceId: null
+  : - !!it.deib.polimi.diaprivacy.model.VCP
+      dataSubject: ds1
+      generalization: 
+        content: 1
+      pastConditions:
+      - {lowerTemporalBound: 0, operator: GREATER_OR_EQUAL, type: INTEGER, upperTemporalBound: 200,
+        value: 110, variable: content, containerStreamId: s1}
+      privacyContext: {purpose: marketing, role: employee, timestamp: -1, userId: u1}
+      segPolicy: It is always the case that if {user EQUAL u1} {role EQUAL employee} {purpose EQUAL marketing} , {s1 GREATER_OR_EQUAL 110 between 0 and 200 from now} {s5 LESS 120} {s3 LESS_OR_EQUAL 110},  [have occurred] then {my data in s1 is not in clear} [holds].
+      simpleConditions:
+      - {operator: LESS_OR_EQUAL, type: INTEGER, value: 110, variable: content, containerStreamId: s3}
+      - {operator: LESS, type: INTEGER, value: 130, variable: content, containerStreamId: s5}
+    - !!it.deib.polimi.diaprivacy.model.VCP
+      dataSubject: ds3
+      generalization: 
+        content: 1
+      pastConditions:
+      - {lowerTemporalBound: 0, operator: LESS, type: INTEGER, upperTemporalBound: 400,
+        value: 120, variable: content, containerStreamId: s5}
+      privacyContext: {purpose: marketing, role: employee, timestamp: -1, userId: u1}
+      segPolicy: It is always the case that if {user EQUAL u1} {role EQUAL employee} {purpose EQUAL marketing} , {s5 LESS 120 between 0 and 400 from now} {s3 GREATER_OR_EQUAL 140},  [have occurred] then {my data in s1 is not in clear} [holds].
+      simpleConditions:
+      - {operator: GREATER_OR_EQUAL, type: INTEGER, value: 140, variable: content, containerStreamId: s3}
+  ? concreteStream: null
+    fields:
+    - {name: content}
+    id: s3
+    isSubjectSpecific: true
+    sourceId: null
+  : []
+  ? concreteStream: null
+    fields:
+    - {name: content}
+    id: s4
+    isSubjectSpecific: false
+    sourceId: null
+  : []
+  ? concreteStream: null
+    fields:
+    - {name: content}
+    id: s5
+    isSubjectSpecific: false
+    sourceId: null
+  : []
+  ? concreteStream: null
+    fields:
+    - {name: content}
+    id: s6
+    isSubjectSpecific: false
+    sourceId: 's2'
+  : []
