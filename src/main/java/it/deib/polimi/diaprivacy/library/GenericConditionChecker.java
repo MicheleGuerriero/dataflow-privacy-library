@@ -495,14 +495,21 @@ public class GenericConditionChecker<T, S>
 	private void initializeWindow(String ds, T tuple, PastCondition cond)
 			throws NoSuchFieldException, SecurityException, IllegalArgumentException, IllegalAccessException {
 
-		Field e = tuple.getClass().getDeclaredField("eventTime");
-		e.setAccessible(true);
+		Field e1 = tuple.getClass().getDeclaredField("eventTime");
+		e1.setAccessible(true);
+		
+		Field e2 = null;
+
 
 		// create a new entry inwindowPerTuple and populate the list with the current
 		// content
 		List<S> initWindow = new ArrayList<S>();
 		for (S t : retainedOtherStreamWindow) {
-			if ((Long) e.get(t) > (Long) e.get(tuple) - cond.timeWindowMilliseconds()) {
+			if(e2 == null) {
+				e2 = t.getClass().getDeclaredField("eventTime");
+				e2.setAccessible(true);
+			}
+			if ((Long) e2.get(t) > (Long) e1.get(tuple) - cond.timeWindowMilliseconds()) {
 				initWindow.add(t);
 			}
 		}
@@ -517,8 +524,13 @@ public class GenericConditionChecker<T, S>
 		PastCondition pc = this.pastConditionPerDataSubject.get(ds);
 		java.util.Iterator<S> iter = this.retainedOtherStreamWindow.iterator();
 		while (iter.hasNext()) {
+
 			S rt = iter.next();
-			if ((Long) e.get(rt) < (Long) e.get(lastValue) - pc.getUpperTemporalBound()) {
+			if(e2 == null) {
+				e2 = rt.getClass().getDeclaredField("eventTime");
+				e2.setAccessible(true);
+			}
+			if ((Long) e2.get(rt) < (Long) e2.get(lastValue) - pc.getUpperTemporalBound()) {
 				iter.remove();
 			}
 		}
