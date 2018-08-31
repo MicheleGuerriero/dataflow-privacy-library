@@ -45,12 +45,15 @@ public class ProtectedStream<T> {
 
 	private HashSet<String> dsWithAtLeastOnePastCondition;
 
+	private String logDir;
+
 	public ProtectedStream() {
 
 	}
 
 	public ProtectedStream(boolean monitoringActive, String timestampServerIp, Integer timestampServerPort,
-			Integer topologyParallelism, Boolean simulateRealisticScenario, Integer allowedLateness) {
+			Integer topologyParallelism, Boolean simulateRealisticScenario, Integer allowedLateness, String logDir) {
+		this.logDir = logDir;
 		this.simulateRealisticScenario = simulateRealisticScenario;
 		this.allowedLateness = allowedLateness;
 		this.topologyParallelism = topologyParallelism;
@@ -88,7 +91,8 @@ public class ProtectedStream<T> {
 		Map<DataStream<?>, PastCondition> genericPastConditions = vcp.getGenericPastConditions(app);
 		Map<DataStream<?>, ContextualCondition> subjectSpecificStaticConditions = vcp
 				.getSubjectSpecificStaticConditions(app, protectedStream);
-		Map<DataStream<?>, ContextualCondition> genericStaticConditions = vcp.getGenericStaticConditions(app, protectedStream);
+		Map<DataStream<?>, ContextualCondition> genericStaticConditions = vcp.getGenericStaticConditions(app,
+				protectedStream);
 		List<ContextualCondition> protectedStreamConds = vcp.getProtectedStreamConds(app, protectedStream);
 
 		for (DataStream<?> conditionedStream : subjectSpecificStaticConditions.keySet()) {
@@ -321,7 +325,7 @@ public class ProtectedStream<T> {
 			}
 		}
 
-		SubjectSpecificConditionChecker<T, S> pastPolicyChecker = new SubjectSpecificConditionChecker<T, S>(
+		SubjectSpecificConditionChecker<T, S> pastPolicyChecker = new SubjectSpecificConditionChecker<T, S>(this.logDir,
 				this.allowedLateness, this.simulateRealisticScenario, nPastConditionCheckers == 0 ? true : false);
 		this.nPastConditionCheckers = nPastConditionCheckers + 1;
 
@@ -369,8 +373,8 @@ public class ProtectedStream<T> {
 			}
 		}
 
-		GenericConditionChecker<T, S> pastPolicyChecker = new GenericConditionChecker<T, S>(this.allowedLateness,
-				this.simulateRealisticScenario, nPastConditionCheckers == 0 ? true : false);
+		GenericConditionChecker<T, S> pastPolicyChecker = new GenericConditionChecker<T, S>(this.logDir,
+				this.allowedLateness, this.simulateRealisticScenario, nPastConditionCheckers == 0 ? true : false);
 		this.nPastConditionCheckers = nPastConditionCheckers + 1;
 
 		if (cond instanceof PastCondition) {

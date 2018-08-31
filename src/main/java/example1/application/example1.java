@@ -26,6 +26,7 @@ import java.util.concurrent.TimeUnit;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.flink.api.common.JobExecutionResult;
+import org.apache.flink.core.fs.FileSystem.WriteMode;
 import org.apache.flink.streaming.api.TimeCharacteristic;
 import org.apache.flink.streaming.api.datastream.DataStream;
 import org.apache.flink.streaming.api.datastream.DataStreamSource;
@@ -42,8 +43,8 @@ public class example1 {
 		StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
 
 		Properties prop = new Properties();
-		prop.load(new FileInputStream("config.properties"));
-		// prop.load(new FileInputStream(args[0]));
+		//prop.load(new FileInputStream("config.properties"));
+		prop.load(new FileInputStream(args[0]));
 
 		String timestampServerIp = prop.getProperty("timestampServerIp");
 		String pathToResultFolder = prop.getProperty("pathToResultFolder");
@@ -83,8 +84,11 @@ public class example1 {
 		/// privacy init
 		Yaml yaml = new Yaml();
 
+		//String content = FileUtils.readFileToString(
+			//	new File("/home/utente/eclipse-workspace/policySyntesizer/src/example1.yml"), "UTF-8");
+		
 		String content = FileUtils.readFileToString(
-				new File("/home/utente/eclipse-workspace/policySyntesizer/src/example1.yml"), "UTF-8");
+				new File(args[1]), "UTF-8");
 
 		ApplicationPrivacy app = yaml.loadAs(content, ApplicationPrivacy.class);
 
@@ -95,21 +99,28 @@ public class example1 {
 				minIntervalBetweenTransactions, maxIntervalBetweenTransactions, notNanoSeconds, minContent, maxContent,
 				nTuples, sleepBeforeFinish, false, "s2", warmUpTuples, coolDownTuples, timestampServerIp,
 				timestampServerPort, simulateRealisticScenario, 2000L, minDelay, maxDelay));
+		app.getStreamByID("s2").setConcreteStream(s2);
 
 		DataStream<SubjectSpecific> s3 = env.addSource(new SubjectSpecificRandomSource(initialDelay, nDataSubject,
 				minIntervalBetweenTransactions, maxIntervalBetweenTransactions, notNanoSeconds, minContent, maxContent,
 				nTuples, sleepBeforeFinish, false, "s3", warmUpTuples, coolDownTuples, timestampServerIp,
 				timestampServerPort, simulateRealisticScenario, 2000L, minDelay, maxDelay));
+		app.getStreamByID("s3").setConcreteStream(s3);
+
 
 		DataStream<SubjectDerived> s4 = env.addSource(new SubjectDerivedRandomSource(initialDelay, nDataSubject,
 				minIntervalBetweenTransactions, maxIntervalBetweenTransactions, notNanoSeconds, minContent, maxContent,
 				nTuples, sleepBeforeFinish, false, "s4", warmUpTuples, coolDownTuples, timestampServerIp,
 				timestampServerPort, simulateRealisticScenario, 2000L, minDelay, maxDelay));
+		app.getStreamByID("s4").setConcreteStream(s4);
+
 
 		DataStream<SubjectDerived> s5 = env.addSource(new SubjectDerivedRandomSource(initialDelay, nDataSubject,
 				minIntervalBetweenTransactions, maxIntervalBetweenTransactions, notNanoSeconds, minContent, maxContent,
 				nTuples, sleepBeforeFinish, false, "s5", warmUpTuples, coolDownTuples, timestampServerIp,
 				timestampServerPort, simulateRealisticScenario, 2000L, minDelay, maxDelay));
+		app.getStreamByID("s5").setConcreteStream(s5);
+
 
 		/////////////////////////////////////////////////// GENERATING SINKS
 		/////////////////////////////////////////////////// ////////////////////////////////////////////////////////
@@ -129,7 +140,7 @@ public class example1 {
 		app_s1.setConcreteStream(s1);
 
 		ProtectedStream<SubjectSpecific> s1_p = new ProtectedStream<SubjectSpecific>(monitoringActive, timestampServerIp,
-				timestampServerPort, topologyParallelism, simulateRealisticScenario, allowedLateness);
+				timestampServerPort, topologyParallelism, simulateRealisticScenario, allowedLateness, pathToResultFolder);
 		s1_p.setStreamToProtect((DataStream<SubjectSpecific>) app_s1.getConcreteStream());
 
 		//////////////
@@ -143,7 +154,7 @@ public class example1 {
 		for (DSEP dsep : app.getDSEPs(app_s1.getId())) {
 			s1_p.addDSEP(app_s1, (DSEP) dsep, app);
 		}
-		s1_p.finalize(env, contextStream).writeAsText(pathToResultFolder + "/" + app_s1.getId() + ".txt")
+		s1_p.finalize(env, contextStream).writeAsText(pathToResultFolder + "/" + app_s1.getId() + "_p.txt", WriteMode.OVERWRITE)
 				.setParallelism(1);
 	    // generating sink for s1
 
@@ -152,7 +163,7 @@ public class example1 {
 		// and set all the policies
 		ApplicationDataStream app_s6 = app.getStreamByID("s6");
 		ProtectedStream<SubjectSpecific> s6_evicted_input = new ProtectedStream<SubjectSpecific>(monitoringActive, timestampServerIp,
-				timestampServerPort, topologyParallelism, simulateRealisticScenario, allowedLateness);
+				timestampServerPort, topologyParallelism, simulateRealisticScenario, allowedLateness, pathToResultFolder);
 		s6_evicted_input.setStreamToProtect(s2);
 
 		for (PrivacyPolicy p : app.getDSEPs(app_s6.getId())) {
@@ -167,7 +178,7 @@ public class example1 {
 				.timeWindowAll(Time.milliseconds(500)).sum(0).setParallelism(1);
 
 		app_s6.setConcreteStream(s6);
-		s6.writeAsText(pathToResultFolder + "/" + app_s6.getId() + ".txt").setParallelism(1);
+		s6.writeAsText(pathToResultFolder + "/" + app_s6.getId() + "_p.txt", WriteMode.OVERWRITE).setParallelism(1);
 		// generating sink for s6
 
 		/////////////////////////////////////////////////// GENENATING SINKS
@@ -230,18 +241,18 @@ public class example1 {
 		 */
 
 		// necessary for trace checking
-		s1.writeAsText(pathToResultFolder + "/s1.txt").setParallelism(1);
+		s1.writeAsText(pathToResultFolder + "/s1.txt", WriteMode.OVERWRITE).setParallelism(1);
 
-		s2.writeAsText(pathToResultFolder + "/s2.txt").setParallelism(1);
+		s2.writeAsText(pathToResultFolder + "/s2.txt", WriteMode.OVERWRITE).setParallelism(1);
 
-		s3.writeAsText(pathToResultFolder + "/s3.txt").setParallelism(1);
+		s3.writeAsText(pathToResultFolder + "/s3.txt", WriteMode.OVERWRITE).setParallelism(1);
 
-		s4.writeAsText(pathToResultFolder + "/s4.txt").setParallelism(1);
+		s4.writeAsText(pathToResultFolder + "/s4.txt", WriteMode.OVERWRITE).setParallelism(1);
 
-		s5.writeAsText(pathToResultFolder + "/s5.txt").setParallelism(1);
+		s5.writeAsText(pathToResultFolder + "/s5.txt", WriteMode.OVERWRITE).setParallelism(1);
 
 		DataStream<Integer> s6_org = s1.map(x -> x.getContent()).timeWindowAll(Time.milliseconds(500)).sum(0);
-		s6_org.writeAsText(pathToResultFolder + "/s6.txt").setParallelism(1);
+		s6_org.writeAsText(pathToResultFolder + "/s6.txt", WriteMode.OVERWRITE).setParallelism(1);
 		//
 
 		try (PrintWriter out = new PrintWriter(pathToResultFolder + "/plan.json")) {

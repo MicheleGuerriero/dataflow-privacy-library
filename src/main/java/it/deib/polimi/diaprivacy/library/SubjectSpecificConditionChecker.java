@@ -60,6 +60,8 @@ public class SubjectSpecificConditionChecker<T, S> extends
 	private PrintWriter writer;
 
 	private HashSet<String> dsWithAtLeastOneCondition;
+	
+	private String logDir;
 
 	public Boolean getIsLast() {
 		return isLast;
@@ -74,7 +76,8 @@ public class SubjectSpecificConditionChecker<T, S> extends
 	private Integer alowedLateness;
 	private Boolean processingInEventTime;
 
-	public SubjectSpecificConditionChecker(Integer allowedLateness, Boolean processingInEventTime, Boolean isFirst) {
+	public SubjectSpecificConditionChecker(String logDir, Integer allowedLateness, Boolean processingInEventTime, Boolean isFirst) {
+		this.logDir = logDir;
 		this.alowedLateness = allowedLateness;
 		this.processingInEventTime = processingInEventTime;
 		this.isFirst = isFirst;
@@ -96,6 +99,8 @@ public class SubjectSpecificConditionChecker<T, S> extends
 		e1.setAccessible(true);
 		
 		Field e2 = null;
+		
+		System.out.println(value.f1);
 		
 		writer.println("Received tuple from the main stream: " + value.f1);
 
@@ -948,7 +953,7 @@ public class SubjectSpecificConditionChecker<T, S> extends
 	public void open(Configuration parameters) throws Exception {
 		try {
 			this.writer = new PrintWriter(
-					"experiments_ide/subject-specific-condition-checker-" + this.associatedStream + ".log", "UTF-8");
+					logDir + "/subject-specific-condition-checker-" + this.associatedStream + ".log", "UTF-8");
 		} catch (FileNotFoundException | UnsupportedEncodingException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();

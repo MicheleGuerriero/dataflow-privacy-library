@@ -58,6 +58,8 @@ public class GenericConditionChecker<T, S>
 	private int associatedStream;
 
 	private PrintWriter writer;
+	
+	private String logDir;
 
 	private HashSet<String> dsWithAtLeastOneCondition;
 
@@ -74,7 +76,8 @@ public class GenericConditionChecker<T, S>
 	private Integer alowedLateness;
 	private Boolean processingInEventTime;
 
-	public GenericConditionChecker(Integer allowedLateness, Boolean processingInEventTime, Boolean isFirst) {
+	public GenericConditionChecker(String logDir, Integer allowedLateness, Boolean processingInEventTime, Boolean isFirst) {
+		this.logDir = logDir;
 		this.alowedLateness = allowedLateness;
 		this.processingInEventTime = processingInEventTime;
 		this.isFirst = isFirst;
@@ -889,7 +892,7 @@ public class GenericConditionChecker<T, S>
 	@Override
 	public void open(Configuration parameters) throws Exception {
 		try {
-			this.writer = new PrintWriter("experiments_ide/generic-condition-checker-" + this.associatedStream + ".log",
+			this.writer = new PrintWriter(this.logDir + "/generic-condition-checker-" + this.associatedStream + ".log",
 					"UTF-8");
 		} catch (FileNotFoundException | UnsupportedEncodingException e) {
 			// TODO Auto-generated catch block

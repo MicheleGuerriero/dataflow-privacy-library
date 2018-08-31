@@ -128,7 +128,7 @@ public class PrivateFinancialTransactionJob {
 
 		ApplicationDataStream app_s2 = app.getStreamByID("s2");
 
-		ProtectedStream<TransactionsCount> s2_p = new ProtectedStream<TransactionsCount>(false, "", -1, 1, true, 6000);
+		ProtectedStream<TransactionsCount> s2_p = new ProtectedStream<TransactionsCount>(false, "", -1, 1, true, 6000, "/home/utente/eclipse-workspace/library/results");
 		s2_p.setStreamToProtect((DataStream<TransactionsCount>) app_s2.getConcreteStream());
 
 		for (VCP vcp : app.getVCPs(app_s2.getId())) {
@@ -147,7 +147,7 @@ public class PrivateFinancialTransactionJob {
 		// s3 privacy conf
 		ApplicationDataStream app_s3 = app.getStreamByID("s3");
 
-		ProtectedStream<TotalExpense> s3_p = new ProtectedStream<TotalExpense>(false, "", -1, 1, true, 6000);
+		ProtectedStream<TotalExpense> s3_p = new ProtectedStream<TotalExpense>(false, "", -1, 1, true, 6000, "/home/utente/eclipse-workspace/library/results");
 		s3_p.setStreamToProtect((DataStream<TotalExpense>) app_s3.getConcreteStream());
 
 		s3_p.addGeneralizationFunction("totalAmount", new Integer(1), new GeneralizationFunction());
