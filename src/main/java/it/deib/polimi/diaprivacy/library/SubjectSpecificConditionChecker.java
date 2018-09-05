@@ -628,7 +628,7 @@ public class SubjectSpecificConditionChecker<T, S> extends
 				value.f2.add(this.checkCondition(value.f1, this.conditionPerDataSubject.get(value.f0)));
 			}
 			
-			if(this.processingInEventTime) {
+			if(this.processingInEventTime && this.alowedLateness > 0) {
 				out.collect(value);
 			}
 		}
