@@ -104,17 +104,18 @@ public class SubjectSpecificConditionChecker<T, S> extends
 		
 		writer.println("Received tuple from the main stream: " + value.f1);
 
+		//for each incoming tuple t_i:=(ts,id,ds,cnt)
+		// if there exists a past condition for on s_2 specified by ds for enabling the protection of s_1
 		if (pastConditionPerDataSubject.containsKey(value.f0)) {
 			writer.println("There exists a past condition for the data subject " + value.f0);
 			PastCondition cond = this.pastConditionPerDataSubject.get(value.f0);
+			// if processing in event time
 			if (this.processingInEventTime && this.alowedLateness > 0) {
+				// if it is the first time that t_i is received (window init phase)
 				if (!this.tupleMetadata.containsKey(value.f1)) {
 					writer.println("First time that this tuple is received. Init phase.");
-					// if not contained and list is empty we are in the initialization phase (firsst
-					// time that I see this tuple)
 
-					// create a new entry inwindowPerTuple and populate the list with the current
-					// content
+					// initialize w_i
 					List<Tuple2<String, S>> initWindow = new ArrayList<Tuple2<String, S>>();
 					for (Tuple2<String, S> t : retainedOtherStreamWindow) {
 						if (e2 == null) {
@@ -231,6 +232,7 @@ public class SubjectSpecificConditionChecker<T, S> extends
 						this.tupleMetadata.put(value.f1, new Tuple3<>(value.f0, initWindow, null));
 					}
 
+					// store the mapping between t_i and w_i
 					this.resultPerTuple.put(value.f1, null);
 
 					// start timer
@@ -247,6 +249,7 @@ public class SubjectSpecificConditionChecker<T, S> extends
 					if (this.resultPerTuple.get(value.f1) == null) {
 						writer.println(
 								"The tuple still have to be processed processed. Saving the other results and waiting for the timer to expire.");
+						// stores the upstream truth values
 						this.otherResults.put(value.f1, value.f2);
 					} else {
 						writer.println("The tuple has been already processed and the result is available: "

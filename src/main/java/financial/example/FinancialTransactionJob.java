@@ -30,35 +30,24 @@ public class FinancialTransactionJob {
 
 		env.setStreamTimeCharacteristic(TimeCharacteristic.EventTime);
 
-		//DataStream<String> input = env.socketTextStream("localhost", 9999);
-		
-
-/*		DataStream<FinancialTransaction> s1 = input.map(new TransactionParser())
-				.assignTimestampsAndWatermarks(new AscendingTimestampExtractor<FinancialTransaction>() {
-
-					@Override
-					public long extractAscendingTimestamp(FinancialTransaction element) {
-						return element.getEventTime();
-					}
-				});*/
-		
 		List<Tuple2<FinancialTransaction, Long>> workload = new ArrayList<Tuple2<FinancialTransaction, Long>>();
 		
-		workload.add(new Tuple2(new FinancialTransaction("t1", "Bob", 50, "Mary", 500L), 0L));
-		workload.add(new Tuple2(new FinancialTransaction("t2", "Mary", 100, "Paul", 1100L), 0L));
-		workload.add(new Tuple2(new FinancialTransaction("t3", "Bob", 100, "Paul", 3900L), 0L));
-		workload.add(new Tuple2(new FinancialTransaction("t4", "Paul", 200, "Mary", 6600L), 0L));
-		workload.add(new Tuple2(new FinancialTransaction("t5", "Bob", 150, "Mary", 8800L), 0L));
-		workload.add(new Tuple2(new FinancialTransaction("t6", "Mary", 50, "Paul", 10100L), 0L));
-		workload.add(new Tuple2(new FinancialTransaction("t7", "Paul", 70, "Bob", 15200L), 0L));
-		workload.add(new Tuple2(new FinancialTransaction("t8", "Bob", 100, "Mary", 19000L), 0L));
-		workload.add(new Tuple2(new FinancialTransaction("t9", "Mary", 500, "Paul", 23700L), 0L));
-		workload.add(new Tuple2(new FinancialTransaction("t10", "Bob", 130, "Mary", 27000L), 0L));
-		workload.add(new Tuple2(new FinancialTransaction("t11", "Paul", 300, "Bob", 29500L), 0L));
-		workload.add(new Tuple2(new FinancialTransaction("t12", "Mary", 150, "Bob", 32000L), 0L));
-		workload.add(new Tuple2(new FinancialTransaction("t13", "Bob", 70, "Paul", 36000L), 0L));
-		workload.add(new Tuple2(new FinancialTransaction("t14", "Mary", 230, "Paul", 39000L), 0L));
-		workload.add(new Tuple2(new FinancialTransaction("t15", "Bob", 550, "Paul", 43000L), 0L));
+		// wrong workload in processing time
+		workload.add(new Tuple2(new FinancialTransaction("t1", "Bob", 50, "Mary", 100050L), 60L));
+		workload.add(new Tuple2(new FinancialTransaction("t2", "Mary", 100, "Paul", 100110L), 280L));
+		workload.add(new Tuple2(new FinancialTransaction("t3", "Bob", 100, "Paul", 100390L), 270L));
+		workload.add(new Tuple2(new FinancialTransaction("t4", "Paul", 200, "Mary", 100660L), 220L));
+		workload.add(new Tuple2(new FinancialTransaction("t5", "Bob", 150, "Mary", 100880L), 130L));
+		workload.add(new Tuple2(new FinancialTransaction("t6", "Mary", 50, "Paul", 101010L), 510L));
+		workload.add(new Tuple2(new FinancialTransaction("t7", "Paul", 70, "Bob", 101520L), 380L));
+		workload.add(new Tuple2(new FinancialTransaction("t8", "Bob", 120, "Mary", 101900L), 470L));
+		workload.add(new Tuple2(new FinancialTransaction("t9", "Mary", 500, "Paul", 102370L), 330L));
+		workload.add(new Tuple2(new FinancialTransaction("t10", "Bob", 130, "Mary", 102700L), 250L));
+		workload.add(new Tuple2(new FinancialTransaction("t11", "Paul", 300, "Bob", 102950L), 250L));
+		workload.add(new Tuple2(new FinancialTransaction("t12", "Mary", 150, "Bob", 103200L), 400L));
+		workload.add(new Tuple2(new FinancialTransaction("t13", "Bob", 70, "Paul", 103600L), 300L));
+		workload.add(new Tuple2(new FinancialTransaction("t14", "Mary", 230, "Paul", 103900L), 400L));
+		workload.add(new Tuple2(new FinancialTransaction("t15", "Bob", 550, "Paul", 104300L), 0L));
 
 		DataStream<FinancialTransaction> s1 = env.addSource(new FinancialTransactionFixedSource(0, 0, workload))
 				.assignTimestampsAndWatermarks(new AscendingTimestampExtractor<FinancialTransaction>() {

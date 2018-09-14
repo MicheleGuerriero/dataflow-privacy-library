@@ -97,27 +97,27 @@ public class example1 {
 		// APP
 		DataStream<SubjectSpecific> s2 = env.addSource(new SubjectSpecificRandomSource(initialDelay, nDataSubject,
 				minIntervalBetweenTransactions, maxIntervalBetweenTransactions, notNanoSeconds, minContent, maxContent,
-				nTuples, sleepBeforeFinish, false, "s2", warmUpTuples, coolDownTuples, timestampServerIp,
+				nTuples, sleepBeforeFinish, !observed, "s2", warmUpTuples, coolDownTuples, timestampServerIp,
 				timestampServerPort, simulateRealisticScenario, 2000L, minDelay, maxDelay));
 		app.getStreamByID("s2").setConcreteStream(s2);
 
 		DataStream<SubjectSpecific> s3 = env.addSource(new SubjectSpecificRandomSource(initialDelay, nDataSubject,
 				minIntervalBetweenTransactions, maxIntervalBetweenTransactions, notNanoSeconds, minContent, maxContent,
-				nTuples, sleepBeforeFinish, false, "s3", warmUpTuples, coolDownTuples, timestampServerIp,
+				nTuples, sleepBeforeFinish, !observed, "s3", warmUpTuples, coolDownTuples, timestampServerIp,
 				timestampServerPort, simulateRealisticScenario, 2000L, minDelay, maxDelay));
 		app.getStreamByID("s3").setConcreteStream(s3);
 
 
 		DataStream<SubjectDerived> s4 = env.addSource(new SubjectDerivedRandomSource(initialDelay, nDataSubject,
 				minIntervalBetweenTransactions, maxIntervalBetweenTransactions, notNanoSeconds, minContent, maxContent,
-				nTuples, sleepBeforeFinish, false, "s4", warmUpTuples, coolDownTuples, timestampServerIp,
+				nTuples, sleepBeforeFinish, !observed, "s4", warmUpTuples, coolDownTuples, timestampServerIp,
 				timestampServerPort, simulateRealisticScenario, 2000L, minDelay, maxDelay));
 		app.getStreamByID("s4").setConcreteStream(s4);
 
 
 		DataStream<SubjectDerived> s5 = env.addSource(new SubjectDerivedRandomSource(initialDelay, nDataSubject,
 				minIntervalBetweenTransactions, maxIntervalBetweenTransactions, notNanoSeconds, minContent, maxContent,
-				nTuples, sleepBeforeFinish, false, "s5", warmUpTuples, coolDownTuples, timestampServerIp,
+				nTuples, sleepBeforeFinish, !observed, "s5", warmUpTuples, coolDownTuples, timestampServerIp,
 				timestampServerPort, simulateRealisticScenario, 2000L, minDelay, maxDelay));
 		app.getStreamByID("s5").setConcreteStream(s5);
 
@@ -162,7 +162,7 @@ public class example1 {
 		// for each stream that goes into a sink and that is generic, than generate the stream
 		// and set all the policies
 		ApplicationDataStream app_s6 = app.getStreamByID("s6");
-		ProtectedStream<SubjectSpecific> s6_evicted_input = new ProtectedStream<SubjectSpecific>(monitoringActive, timestampServerIp,
+		ProtectedStream<SubjectSpecific> s6_evicted_input = new ProtectedStream<SubjectSpecific>(!monitoringActive, timestampServerIp,
 				timestampServerPort, topologyParallelism, simulateRealisticScenario, allowedLateness, pathToResultFolder);
 		s6_evicted_input.setStreamToProtect(s2);
 
@@ -254,6 +254,8 @@ public class example1 {
 		DataStream<Integer> s6_org = s1.map(x -> x.getContent()).timeWindowAll(Time.milliseconds(500)).sum(0);
 		s6_org.writeAsText(pathToResultFolder + "/s6.txt", WriteMode.OVERWRITE).setParallelism(1);
 		//
+		
+		contextStream.writeAsText(pathToResultFolder + "/ctx.txt", WriteMode.OVERWRITE).setParallelism(1);
 
 		try (PrintWriter out = new PrintWriter(pathToResultFolder + "/plan.json")) {
 			out.println(env.getExecutionPlan());
