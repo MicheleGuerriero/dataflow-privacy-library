@@ -661,7 +661,9 @@ public class GenericConditionChecker<T, S>
 			Field ts = tuple.getClass().getDeclaredField("eventTime");
 			ts.setAccessible(true);
 
-			if (this.pastConditionPerDataSubject.containsKey((String) ds.get(tuple))) {
+			if (this.pastConditionPerDataSubject.containsKey((String) ds.get(tuple)) &&
+					tupleMetadata.get(tuple) != null 
+					&& tupleMetadata.get(tuple).f1 != null) {
 				List<S> updatedList = tupleMetadata.get(tuple).f1;
 
 				PastCondition userPastEventPolicy = this.pastConditionPerDataSubject.get((String) ds.get(tuple));
@@ -687,7 +689,9 @@ public class GenericConditionChecker<T, S>
 			Field ts = tuple.getClass().getDeclaredField("eventTime");
 			ts.setAccessible(true);
 
-			if (this.tupleMetadata.get(tuple).f2 != null) {
+			
+			if (this.tupleMetadata.get(tuple) != null 
+					&& this.tupleMetadata.get(tuple).f2 != null) {
 				if ((Long) tg.get(value) > (Long) tg.get(this.tupleMetadata.get(tuple).f2)
 						&& (Long) tg.get(value) <= (Long) ts.get(tuple)) {
 					writer.println(
@@ -706,8 +710,11 @@ public class GenericConditionChecker<T, S>
 					writer.println(
 							"The just received tuple has a timestamp which is older than the waiting tuple. Updating last value associated to the waiting tuple.");
 
-					this.tupleMetadata.put(tuple,
-							new Tuple3<>(this.tupleMetadata.get(tuple).f0, this.tupleMetadata.get(tuple).f1, value));
+					if(this.tupleMetadata.get(tuple) != null && this.tupleMetadata.get(tuple).f0 != null && this.tupleMetadata.get(tuple).f1 != null) {
+						this.tupleMetadata.put(tuple,
+								new Tuple3<>(this.tupleMetadata.get(tuple).f0, this.tupleMetadata.get(tuple).f1, value));	
+					}
+
 				} else {
 					writer.println(
 							"The just received tuple has a timestamp which is newer than the waiting tuple. No update.");

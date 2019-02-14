@@ -265,9 +265,6 @@ public class SubjectSpecificRandomSource implements SourceFunction<SubjectSpecif
 					iter.remove();
 				}
 			}
-			for (Tuple2<SubjectSpecific, Long> t : this.workloadQueue) {
-	
-			}
 
 			if (i < nTuples) {
 				if (isNanoseconds) {

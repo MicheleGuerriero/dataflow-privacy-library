@@ -19,7 +19,7 @@ import org.apache.flink.api.java.tuple.Tuple2;
 
 public class StreamMerger {
 
-	public static void merge(String experimentFolderPath) throws FileNotFoundException {
+	public static void mergeVcp(String experimentFolderPath) throws FileNotFoundException {
 
 		sortStream(new File(experimentFolderPath + "/s2.txt"), new File(experimentFolderPath + "/s2_sorted.txt"));
 		sortStream(new File(experimentFolderPath + "/s3.txt"), new File(experimentFolderPath + "/s3_sorted.txt"));
@@ -52,6 +52,26 @@ public class StreamMerger {
 		merge(new File(experimentFolderPath + "/ctx.txt"), new File(experimentFolderPath + "/merged-tmp4.txt"),
 				new File(experimentFolderPath + "/merged.log"));
 
+	}
+	
+	public static void mergeDsep(String experimentFolderPath) throws FileNotFoundException {
+		sortStream(new File(experimentFolderPath + "/s2.txt"), new File(experimentFolderPath + "/s2_sorted.txt"));
+		sortStream(new File(experimentFolderPath + "/s3.txt"), new File(experimentFolderPath + "/s3_sorted.txt"));
+		sortStream(new File(experimentFolderPath + "/s4.txt"), new File(experimentFolderPath + "/s4_sorted.txt"));
+		sortStream(new File(experimentFolderPath + "/s5.txt"), new File(experimentFolderPath + "/s5_sorted.txt"));
+		
+		
+		merge(new File(experimentFolderPath + "/s3_sorted.txt"), new File(experimentFolderPath + "/s2_sorted.txt"),
+				new File(experimentFolderPath + "/merged-tmp.txt"));
+		
+		merge(new File(experimentFolderPath + "/s4_sorted.txt"), new File(experimentFolderPath + "/merged-tmp.txt"),
+				new File(experimentFolderPath + "/merged-tmp2.txt"));
+		
+		merge(new File(experimentFolderPath + "/s5_sorted.txt"), new File(experimentFolderPath + "/merged-tmp2.txt"),
+				new File(experimentFolderPath + "/merged-tmp3.txt"));
+		
+		merge(new File(experimentFolderPath + "/ctx.txt"), new File(experimentFolderPath + "/merged-tmp3.txt"),
+				new File(experimentFolderPath + "/merged-private.log"));
 	}
 	
 	public static void genericMerge(String experimentFolderPath, List<String> streamNames, String output) {

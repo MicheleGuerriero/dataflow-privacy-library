@@ -71,7 +71,7 @@ public class SubjectSpecificConditionChecker<T, S> extends
 		this.isLast = isLast;
 	}
 
-	private static final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(50);
+	private static final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1200);
 
 	private Integer alowedLateness;
 	private Boolean processingInEventTime;
@@ -99,9 +99,7 @@ public class SubjectSpecificConditionChecker<T, S> extends
 		e1.setAccessible(true);
 		
 		Field e2 = null;
-		
-		System.out.println(value.f1);
-		
+				
 		writer.println("Received tuple from the main stream: " + value.f1);
 
 		//for each incoming tuple t_i:=(ts,id,ds,cnt)
@@ -227,6 +225,7 @@ public class SubjectSpecificConditionChecker<T, S> extends
 
 						}
 					} else {
+						
 						writer.println("Data subject " + value.f0 + " has no static condition on the stream "
 								+ this.associatedStream + ". Setting no value for evaluating static condition.");
 						this.tupleMetadata.put(value.f1, new Tuple3<>(value.f0, initWindow, null));
@@ -693,26 +692,30 @@ public class SubjectSpecificConditionChecker<T, S> extends
 			writer.println("Updating the windows associated to each waiting tuple which referes to " + value.f0);
 
 			for (T tuple : tupleMetadata.keySet()) {
-				List<Tuple2<String, S>> updatedList = tupleMetadata.get(tuple).f1;
-
-				Field ds = tuple.getClass().getDeclaredField("dataSubject");
-				ds.setAccessible(true);
 				
-				if (t2 == null) {
-					t2 = tuple.getClass().getDeclaredField("eventTime");
-					t2.setAccessible(true);
-				}
+				Tuple3<String, List<Tuple2<String, S>>, S> entry = tupleMetadata.get(tuple);
+				if(entry != null && entry.f1 != null) {
+					List<Tuple2<String, S>> updatedList = entry.f1;
 
-				if (value.f0.equals(ds.get(tuple))) {
-					writer.println("Found a waiting tuple of the main stream about " + value.f0 + ": " + tuple);
-					if ((Long) t1.get(value.f1) >= (Long) t2.get(tuple) - userPastEventPolicy.timeWindowMilliseconds()
-							&& (Long) t1.get(value.f1) <= (Long) t2.get(tuple)) {
-						writer.println(
-								"The just received tuple has a timestamp which is older than the waiting tuple but within the window specified by the past condition. Updating the window associated to the waiting tuple.");
-						updatedList.add(value);
-					} else {
-						writer.println(
-								"The just received tuple has a timestamp which is either newer than the waiting tuple or that do not belong to the window specified by the past condition. No update.");
+					Field ds = tuple.getClass().getDeclaredField("dataSubject");
+					ds.setAccessible(true);
+					
+					if (t2 == null) {
+						t2 = tuple.getClass().getDeclaredField("eventTime");
+						t2.setAccessible(true);
+					}
+
+					if (value.f0.equals(ds.get(tuple))) {
+						writer.println("Found a waiting tuple of the main stream about " + value.f0 + ": " + tuple);
+						if ((Long) t1.get(value.f1) >= (Long) t2.get(tuple) - userPastEventPolicy.timeWindowMilliseconds()
+								&& (Long) t1.get(value.f1) <= (Long) t2.get(tuple)) {
+							writer.println(
+									"The just received tuple has a timestamp which is older than the waiting tuple but within the window specified by the past condition. Updating the window associated to the waiting tuple.");
+							updatedList.add(value);
+						} else {
+							writer.println(
+									"The just received tuple has a timestamp which is either newer than the waiting tuple or that do not belong to the window specified by the past condition. No update.");
+						}
 					}
 				}
 			}

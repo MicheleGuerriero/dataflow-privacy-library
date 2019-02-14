@@ -76,6 +76,8 @@ public class example1 {
 		Integer maxContent = 200;
 		Integer sleepBeforeFinish = 5000;
 		Boolean observed = true;
+		
+		Integer trafficScaleFactor = 1;
 
 		env.setStreamTimeCharacteristic(TimeCharacteristic.IngestionTime);
 		env.setParallelism(Integer.parseInt(prop.getProperty("topologyParallelism")));
@@ -96,42 +98,71 @@ public class example1 {
 
 		// APP
 		DataStream<SubjectSpecific> s2 = env.addSource(new SubjectSpecificRandomSource(initialDelay, nDataSubject,
-				minIntervalBetweenTransactions, maxIntervalBetweenTransactions, notNanoSeconds, minContent, maxContent,
-				nTuples, sleepBeforeFinish, !observed, "s2", warmUpTuples, coolDownTuples, timestampServerIp,
-				timestampServerPort, simulateRealisticScenario, 2000L, minDelay, maxDelay));
+				minIntervalBetweenTransactions*trafficScaleFactor, maxIntervalBetweenTransactions*trafficScaleFactor, notNanoSeconds, minContent, maxContent,
+				nTuples/trafficScaleFactor, sleepBeforeFinish, !observed, "s2", warmUpTuples, coolDownTuples, timestampServerIp,
+				timestampServerPort, false, 2000L, minDelay, maxDelay));
 		app.getStreamByID("s2").setConcreteStream(s2);
 
 		DataStream<SubjectSpecific> s3 = env.addSource(new SubjectSpecificRandomSource(initialDelay, nDataSubject,
-				minIntervalBetweenTransactions, maxIntervalBetweenTransactions, notNanoSeconds, minContent, maxContent,
-				nTuples, sleepBeforeFinish, !observed, "s3", warmUpTuples, coolDownTuples, timestampServerIp,
+				minIntervalBetweenTransactions*trafficScaleFactor, maxIntervalBetweenTransactions*trafficScaleFactor, notNanoSeconds, minContent, maxContent,
+				nTuples/trafficScaleFactor, sleepBeforeFinish, !observed, "s3", warmUpTuples, coolDownTuples, timestampServerIp,
 				timestampServerPort, simulateRealisticScenario, 2000L, minDelay, maxDelay));
 		app.getStreamByID("s3").setConcreteStream(s3);
 
 
 		DataStream<SubjectDerived> s4 = env.addSource(new SubjectDerivedRandomSource(initialDelay, nDataSubject,
-				minIntervalBetweenTransactions, maxIntervalBetweenTransactions, notNanoSeconds, minContent, maxContent,
-				nTuples, sleepBeforeFinish, !observed, "s4", warmUpTuples, coolDownTuples, timestampServerIp,
+				minIntervalBetweenTransactions*trafficScaleFactor, maxIntervalBetweenTransactions*trafficScaleFactor, notNanoSeconds, minContent, maxContent,
+				nTuples/trafficScaleFactor, sleepBeforeFinish, !observed, "s4", warmUpTuples, coolDownTuples, timestampServerIp,
 				timestampServerPort, simulateRealisticScenario, 2000L, minDelay, maxDelay));
 		app.getStreamByID("s4").setConcreteStream(s4);
 
 
 		DataStream<SubjectDerived> s5 = env.addSource(new SubjectDerivedRandomSource(initialDelay, nDataSubject,
-				minIntervalBetweenTransactions, maxIntervalBetweenTransactions, notNanoSeconds, minContent, maxContent,
-				nTuples, sleepBeforeFinish, !observed, "s5", warmUpTuples, coolDownTuples, timestampServerIp,
+				minIntervalBetweenTransactions*trafficScaleFactor, maxIntervalBetweenTransactions*trafficScaleFactor, notNanoSeconds, minContent, maxContent,
+				nTuples/trafficScaleFactor, sleepBeforeFinish, !observed, "s5", warmUpTuples, coolDownTuples, timestampServerIp,
 				timestampServerPort, simulateRealisticScenario, 2000L, minDelay, maxDelay));
 		app.getStreamByID("s5").setConcreteStream(s5);
+		
+		DataStream<SubjectSpecific> s7 = env.addSource(new SubjectSpecificRandomSource(initialDelay, nDataSubject,
+				minIntervalBetweenTransactions*trafficScaleFactor, maxIntervalBetweenTransactions*trafficScaleFactor, notNanoSeconds, minContent, maxContent,
+				nTuples/trafficScaleFactor, sleepBeforeFinish, !observed, "s7", warmUpTuples, coolDownTuples, timestampServerIp,
+				timestampServerPort, simulateRealisticScenario, 2000L, minDelay, maxDelay));
+		app.getStreamByID("s7").setConcreteStream(s7);
+		
+		DataStream<SubjectSpecific> s8 = env.addSource(new SubjectSpecificRandomSource(initialDelay, nDataSubject,
+				minIntervalBetweenTransactions*trafficScaleFactor, maxIntervalBetweenTransactions*trafficScaleFactor, notNanoSeconds, minContent, maxContent,
+				nTuples/trafficScaleFactor, sleepBeforeFinish, !observed, "s8", warmUpTuples, coolDownTuples, timestampServerIp,
+				timestampServerPort, simulateRealisticScenario, 2000L, minDelay, maxDelay));
+		app.getStreamByID("s8").setConcreteStream(s8);
+		
+		DataStream<SubjectSpecific> s9 = env.addSource(new SubjectSpecificRandomSource(initialDelay, nDataSubject,
+				minIntervalBetweenTransactions*trafficScaleFactor, maxIntervalBetweenTransactions*trafficScaleFactor, notNanoSeconds, minContent, maxContent,
+				nTuples/trafficScaleFactor, sleepBeforeFinish, !observed, "s9", warmUpTuples, coolDownTuples, timestampServerIp,
+				timestampServerPort, simulateRealisticScenario, 2000L, minDelay, maxDelay));
+		app.getStreamByID("s9").setConcreteStream(s9);
+		
+		DataStream<SubjectDerived> s10 = env.addSource(new SubjectDerivedRandomSource(initialDelay, nDataSubject,
+				minIntervalBetweenTransactions*trafficScaleFactor, maxIntervalBetweenTransactions*trafficScaleFactor, notNanoSeconds, minContent, maxContent,
+				nTuples/trafficScaleFactor, sleepBeforeFinish, !observed, "s10", warmUpTuples, coolDownTuples, timestampServerIp,
+				timestampServerPort, simulateRealisticScenario, 2000L, minDelay, maxDelay));
+		app.getStreamByID("s10").setConcreteStream(s10);
+		
+		DataStream<SubjectDerived> s11 = env.addSource(new SubjectDerivedRandomSource(initialDelay, nDataSubject,
+				minIntervalBetweenTransactions*trafficScaleFactor, maxIntervalBetweenTransactions*trafficScaleFactor, notNanoSeconds, minContent, maxContent,
+				nTuples/trafficScaleFactor, sleepBeforeFinish, !observed, "s11", warmUpTuples, coolDownTuples, timestampServerIp,
+				timestampServerPort, simulateRealisticScenario, 2000L, minDelay, maxDelay));
+		app.getStreamByID("s11").setConcreteStream(s11);
+		
+		DataStream<SubjectDerived> s12 = env.addSource(new SubjectDerivedRandomSource(initialDelay, nDataSubject,
+				minIntervalBetweenTransactions*trafficScaleFactor, maxIntervalBetweenTransactions*trafficScaleFactor, notNanoSeconds, minContent, maxContent,
+				nTuples/trafficScaleFactor, sleepBeforeFinish, !observed, "s12", warmUpTuples, coolDownTuples, timestampServerIp,
+				timestampServerPort, simulateRealisticScenario, 2000L, minDelay, maxDelay));
+		app.getStreamByID("s12").setConcreteStream(s12);
 
-
-		/////////////////////////////////////////////////// GENERATING SINKS
-		/////////////////////////////////////////////////// ////////////////////////////////////////////////////////
-		//////////////////////////////// WE ASSUME IN THIS APP ALL THE STREAM GO INTO
-		/////////////////////////////////////////////////// A SINK
-		/////////////////////////////////////////////////// //////////////////////////////////////
-
-	    // generating sink for s1
+	    // generating sink for s1 (START)
 		// for each stream that goes into a sink and that is subject specific, generate the stream
 		// and set all the policies
-		DataStream<SubjectSpecific> s1 = env.addSource(new SubjectSpecificRandomSource(initialDelay, nDataSubject,
+/*		DataStream<SubjectSpecific> s1 = env.addSource(new SubjectSpecificRandomSource(initialDelay, nDataSubject,
 				minIntervalBetweenTransactions, maxIntervalBetweenTransactions, notNanoSeconds, minContent, maxContent,
 				nTuples, sleepBeforeFinish, observed, "s1", warmUpTuples, coolDownTuples, timestampServerIp,
 				timestampServerPort, false, 2000L, minDelay, maxDelay));
@@ -143,107 +174,57 @@ public class example1 {
 				timestampServerPort, topologyParallelism, simulateRealisticScenario, allowedLateness, pathToResultFolder);
 		s1_p.setStreamToProtect((DataStream<SubjectSpecific>) app_s1.getConcreteStream());
 
-		//////////////
 		s1_p.addGeneralizationFunction("content", new Integer(1), new GeneralizationFunction());
-		//////////////
 
 		for (VCP vcp : app.getVCPs(app_s1.getId())) {
-			s1_p.addVCP(app_s1, (VCP) vcp, app);
+			s1_p.addVCP(app_s1, vcp, app);
 		}
 
 		for (DSEP dsep : app.getDSEPs(app_s1.getId())) {
-			s1_p.addDSEP(app_s1, (DSEP) dsep, app);
+			s1_p.addDSEP(app_s1, dsep, app);
 		}
+		//s1_p.finalize(env, contextStream);
+		
+		
+		// necessary for trace-checking
 		s1_p.finalize(env, contextStream).writeAsText(pathToResultFolder + "/" + app_s1.getId() + "_p.txt", WriteMode.OVERWRITE)
-				.setParallelism(1);
-	    // generating sink for s1
+				.setParallelism(1);*/
+		// necessary for trace-checking
+	    // generating sink for s1 (END)
 
-		// generating sink for s6
+		// generating sink for s6 (START)
 		// for each stream that goes into a sink and that is generic, than generate the stream
 		// and set all the policies
+	
+		
 		ApplicationDataStream app_s6 = app.getStreamByID("s6");
-		ProtectedStream<SubjectSpecific> s6_evicted_input = new ProtectedStream<SubjectSpecific>(!monitoringActive, timestampServerIp,
+		ProtectedStream<SubjectSpecific> s6_evicted_input = new ProtectedStream<SubjectSpecific>(monitoringActive, timestampServerIp,
 				timestampServerPort, topologyParallelism, simulateRealisticScenario, allowedLateness, pathToResultFolder);
 		s6_evicted_input.setStreamToProtect(s2);
 
-		for (PrivacyPolicy p : app.getDSEPs(app_s6.getId())) {
-			if (p instanceof DSEP) {
-				if (!app_s6.getIsSubjectSpecific()) {
-					s6_evicted_input.addDSEP(app_s6, (DSEP) p, app);
-				}
+		for (DSEP p : app.getDSEPs(app_s6.getId())) {
+			if (!app_s6.getIsSubjectSpecific()) {
+				s6_evicted_input.addDSEP(app_s6, p, app);
 			}
 		}
 
-		DataStream<Integer> s6 = s6_evicted_input.finalize(env, contextStream).map(x -> x.getContent())
+		DataStream<SubjectSpecific> s2_evicted = s6_evicted_input.finalize(env, contextStream);
+		
+		DataStream<Integer> s6 = s2_evicted.map(x -> x.getContent())
 				.timeWindowAll(Time.milliseconds(500)).sum(0).setParallelism(1);
 
 		app_s6.setConcreteStream(s6);
-		s6.writeAsText(pathToResultFolder + "/" + app_s6.getId() + "_p.txt", WriteMode.OVERWRITE).setParallelism(1);
-		// generating sink for s6
-
-		/////////////////////////////////////////////////// GENENATING SINKS
-		/////////////////////////////////////////////////// ////////////////////////////////////////////////////////
-		// END APP
-
-		/*
-		 * if (privacyOn) {
-		 * 
-		 * ProtectedStream<SubjectSpecific> s1_p = new
-		 * ProtectedStream<SubjectSpecific>(timestampServerIp, timestampServerPort,
-		 * topologyParallelism, simulateRealisticScenario, allowedLateness);
-		 * s1_p.setStreamToProtect(s1);
-		 * 
-		 * s1_p.addGeneralizationFunction("content", new Integer(1), new
-		 * GeneralizationFunction());
-		 * 
-		 * List<ContextualCondition> protectedStreamConds = new
-		 * ArrayList<ContextualCondition>(); protectedStreamConds.add(new
-		 * ContextualCondition("content", VariableType.INTEGER,
-		 * RelationalOperator.GREATER, new Integer(130)));
-		 * ///////////////////////////////
-		 * 
-		 * PastCondition sspc = new PastCondition("content", VariableType.INTEGER,
-		 * RelationalOperator.GREATER, new Integer(130), 0, 300); Map<DataStream<?>,
-		 * PastCondition> subjectSpecificPastConds = new HashMap<DataStream<?>,
-		 * PastCondition>(); subjectSpecificPastConds.put(s2, sspc);
-		 * 
-		 * PastCondition gpc = new PastCondition("content", VariableType.INTEGER,
-		 * RelationalOperator.GREATER, new Integer(130), 0, 300); Map<DataStream<?>,
-		 * PastCondition> genericPastConds = new HashMap<DataStream<?>,
-		 * PastCondition>(); genericPastConds.put(s4, gpc);
-		 * 
-		 * ContextualCondition sssc = new ContextualCondition("content",
-		 * VariableType.INTEGER, RelationalOperator.GREATER, new Integer(130));
-		 * Map<DataStream<?>, ContextualCondition> subjectSpecificStaticConds = new
-		 * HashMap<DataStream<?>, ContextualCondition>();
-		 * subjectSpecificStaticConds.put(s3, sssc);
-		 * 
-		 * ContextualCondition gsc = new ContextualCondition("content",
-		 * VariableType.INTEGER, RelationalOperator.GREATER, new Integer(130));
-		 * Map<DataStream<?>, ContextualCondition> genericStaticConds = new
-		 * HashMap<DataStream<?>, ContextualCondition>(); genericStaticConds.put(s5,
-		 * gsc);
-		 * 
-		 * ///////////////////////////////
-		 * 
-		 * GeneralizationVector gv = new GeneralizationVector();
-		 * gv.setVariableGenLevel("content", 1);
-		 * 
-		 * s1_p.addVCP("ds1", subjectSpecificPastConds, genericPastConds,
-		 * subjectSpecificStaticConds, genericStaticConds, new PrivacyContext("u1",
-		 * "employee", "marketing"), protectedStreamConds, gv);
-		 * 
-		 * s1_p.finalize(env, contextStream).writeAsText(pathToResultFolder +
-		 * "/s1_p.txt").setParallelism(1);
-		 * 
-		 * contextStream.writeAsText(pathToResultFolder + "/ctx.txt").setParallelism(1);
-		 * }
-		 */
-
+		
+		
+		// generating sink for s6 (END)
+		
 		// necessary for trace checking
-		s1.writeAsText(pathToResultFolder + "/s1.txt", WriteMode.OVERWRITE).setParallelism(1);
+		s6.writeAsText(pathToResultFolder + "/" + app_s6.getId() + "_p.txt", WriteMode.OVERWRITE).setParallelism(1);
 
-		s2.writeAsText(pathToResultFolder + "/s2.txt", WriteMode.OVERWRITE).setParallelism(1);
+		
+		//s1.writeAsText(pathToResultFolder + "/s1.txt", WriteMode.OVERWRITE).setParallelism(1);
+
+		s2_evicted.writeAsText(pathToResultFolder + "/s2.txt", WriteMode.OVERWRITE).setParallelism(1);
 
 		s3.writeAsText(pathToResultFolder + "/s3.txt", WriteMode.OVERWRITE).setParallelism(1);
 
@@ -251,12 +232,13 @@ public class example1 {
 
 		s5.writeAsText(pathToResultFolder + "/s5.txt", WriteMode.OVERWRITE).setParallelism(1);
 
-		DataStream<Integer> s6_org = s1.map(x -> x.getContent()).timeWindowAll(Time.milliseconds(500)).sum(0);
+		DataStream<Integer> s6_org = s2.map(x -> x.getContent()).timeWindowAll(Time.milliseconds(500)).sum(0);
 		s6_org.writeAsText(pathToResultFolder + "/s6.txt", WriteMode.OVERWRITE).setParallelism(1);
-		//
+		
 		
 		contextStream.writeAsText(pathToResultFolder + "/ctx.txt", WriteMode.OVERWRITE).setParallelism(1);
-
+		// necessary for trace checking
+		
 		try (PrintWriter out = new PrintWriter(pathToResultFolder + "/plan.json")) {
 			out.println(env.getExecutionPlan());
 			out.close();
@@ -278,8 +260,10 @@ public class example1 {
 		System.out.println("######### THROUGHPUT: " + (double) nTuples / result.getNetRuntime(TimeUnit.MILLISECONDS)
 				+ " ######### \n");
 
+		
 		System.out.println("Merging output for trace checking.");
-		StreamMerger.merge(pathToResultFolder);
+		StreamMerger.mergeDsep(pathToResultFolder);
+		
 		// StreamMerger.merge(new File(pathToResultFolder + "/s1.txt"), new
 		// File(pathToResultFolder + "/s2.txt"),
 		// new File(pathToResultFolder + "/merged.txt"));

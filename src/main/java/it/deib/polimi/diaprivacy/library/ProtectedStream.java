@@ -82,19 +82,19 @@ public class ProtectedStream<T> {
 	}
 
 	@SuppressWarnings("unchecked")
-	private void setPolicyContext(ApplicationDataStream protectedStream, PrivacyPolicy vcp, ApplicationPrivacy app) {
+	private void setPolicyContext(ApplicationDataStream protectedStream, PrivacyPolicy policy, ApplicationPrivacy app) {
 
 		boolean pccAlreadyExists;
 
-		String ds = vcp.getDataSubject();
-		Map<DataStream<?>, PastCondition> subjectSpecificPastConditions = vcp.getSubjectSpecificPastConditions(app);
-		Map<DataStream<?>, PastCondition> genericPastConditions = vcp.getGenericPastConditions(app);
-		Map<DataStream<?>, ContextualCondition> subjectSpecificStaticConditions = vcp
+		String ds = policy.getDataSubject();
+		Map<DataStream<?>, PastCondition> subjectSpecificPastConditions = policy.getSubjectSpecificPastConditions(app);
+		Map<DataStream<?>, PastCondition> genericPastConditions = policy.getGenericPastConditions(app);
+		Map<DataStream<?>, ContextualCondition> subjectSpecificStaticConditions = policy
 				.getSubjectSpecificStaticConditions(app, protectedStream);
-		Map<DataStream<?>, ContextualCondition> genericStaticConditions = vcp.getGenericStaticConditions(app,
+		Map<DataStream<?>, ContextualCondition> genericStaticConditions = policy.getGenericStaticConditions(app,
 				protectedStream);
-		List<ContextualCondition> protectedStreamConds = vcp.getProtectedStreamConds(app, protectedStream);
-
+		List<ContextualCondition> protectedStreamConds = policy.getProtectedStreamConds(app, protectedStream);
+		
 		for (DataStream<?> conditionedStream : subjectSpecificStaticConditions.keySet()) {
 			pccAlreadyExists = false;
 			for (SubjectSpecificConditionChecker<T, ?> pcc : addedSubjectSpecificPccs) {
@@ -143,7 +143,7 @@ public class ProtectedStream<T> {
 				GenericConditionChecker<T, ?> pcc = this.addGenericStreamCondition(pastConditionedStream, ds,
 						genericPastConditions.get(pastConditionedStream));
 				pcc.setAssociatedStream(pastConditionedStream.getId());
-				this.addedGenericPccs.add(pcc);
+				this.addGenericPcc(pcc);
 
 			}
 		}
@@ -161,12 +161,12 @@ public class ProtectedStream<T> {
 				SubjectSpecificConditionChecker<T, ?> pcc = this.addSubjectSpecificStreamCondition(
 						pastConditionedStream, ds, subjectSpecificPastConditions.get(pastConditionedStream));
 				pcc.setAssociatedStream(pastConditionedStream.getId());
-				this.addedSubjectSpecificPccs.add(pcc);
+				this.addSubjectSpecificPcc(pcc);
 
 			}
 		}
 
-		this.setContextualPattern(ds, vcp.getPrivacyContext(), protectedStreamConds);
+		this.setContextualPattern(ds, policy.getPrivacyContext(), protectedStreamConds);
 		if ((subjectSpecificPastConditions != null && !subjectSpecificPastConditions.isEmpty())
 				|| (genericPastConditions != null && !genericPastConditions.isEmpty())
 				|| (subjectSpecificStaticConditions != null && !subjectSpecificStaticConditions.isEmpty())
@@ -174,7 +174,15 @@ public class ProtectedStream<T> {
 			this.dsWithAtLeastOnePastCondition.add(ds);
 		}
 	}
+	
+	private void addGenericPcc(GenericConditionChecker<T, ?> pcc) {
+		this.addedGenericPccs.add(pcc);
+	}
 
+	private void addSubjectSpecificPcc(SubjectSpecificConditionChecker<T, ?> pcc) {
+		this.addedSubjectSpecificPccs.add(pcc);
+	}
+	
 	@SuppressWarnings("unchecked")
 	public void addVCP(String ds, Map<DataStream<?>, PastCondition> subjectSpecificPastConditions,
 			Map<DataStream<?>, PastCondition> genericPastConditions,
